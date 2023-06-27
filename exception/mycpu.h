@@ -7,10 +7,12 @@
     `define ES_TO_MS_BUS_WD 71
     `define MS_TO_WS_BUS_WD 70
     `define WS_TO_RF_BUS_WD 38
+    `define MS_TO_ES_BUS_WD 100 // ! need to be determined
+    `define WS_TO_ES_BUS_WD 100 // ! need to be determined
 
     // exception part
-    `define CP0_REGISTER_BUS_WD       100
-    `define WB_TO_CP0_REGISTER_BUS_WD 100
+    `define CP0_REGISTER_BUS_WD       100 // ! need to be determined
+    `define WB_TO_CP0_REGISTER_BUS_WD 100 // ! need to be determined
     `define EX_ADEL         4
     `define EX_ADES         5
 
