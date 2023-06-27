@@ -28,7 +28,10 @@ assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
-assign {ds_inst,
+/*********************************/
+wire       ex_from_if;
+assign {ex_from_if,
+        ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
 
 wire        rf_we   ;
@@ -43,7 +46,6 @@ wire        br_taken;
 wire [31:0] br_target;
 
 wire [11:0] alu_op;
-//wire        load_op;
 wire        src1_is_sa;
 wire        src1_is_pc;
 wire        src2_is_imm;
@@ -101,9 +103,37 @@ wire [31:0] rf_rdata2;
 wire        rs_eq_rt;
 
 assign br_bus       = {br_taken,br_target};
-
-assign ds_to_es_bus = {alu_op      ,  //135:124
-                       //load_op     ,  //123:123   这个悬空了 
+/*********************************************/
+reg        ds_ex;
+reg [ 4:0] ds_excode;
+wire       inst_undef;  // indicate whether the instruction is undefined or not
+                        // ! absence of its logic part
+always @(*) begin
+    if (ex_from_if) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h04;
+    end
+    else if (inst_break) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h09;
+    end
+    else if (inst_syscall) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h08;
+    end
+    else if (inst_undef) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h0a;
+    end
+    else begin
+        ds_ex     <= 1'b0;
+        ds_excode <= 5'hxx; // ! do need to be undetermined? 
+    end
+end
+/**********************************************/
+assign ds_to_es_bus = {ds_ex,
+                       ds_excode,
+                       alu_op      ,  //135:124
                        res_from_mem,  //123:123
                        src1_is_sa  ,  //122:122
                        src1_is_pc  ,  //121:121
@@ -121,7 +151,7 @@ assign ds_to_es_bus = {alu_op      ,  //135:124
 assign ds_ready_go    = 1'b1;
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
-//这里的vaild信号bug2
+
 always @(posedge clk) begin
     if (reset) begin
         ds_valid <= 1'b0;
@@ -170,6 +200,10 @@ assign inst_bne    = op_d[6'h05];
 assign inst_jal    = op_d[6'h03];
 assign inst_jr     = op_d[6'h00] & func_d[6'h08] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
 
+/*******************************/
+assign inst_syscall = op_d[6'h00] & func_d[6'h0c];
+assign inst_break   = op_d[6'h00] & func_d[6'h0d];
+
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal;
 assign alu_op[ 1] = inst_subu;
 assign alu_op[ 2] = inst_slt;
@@ -183,13 +217,11 @@ assign alu_op[ 9] = inst_srl;
 assign alu_op[10] = inst_sra;
 assign alu_op[11] = inst_lui;
 
-//bug1,Load悬空
-
 assign src1_is_sa   = inst_sll   | inst_srl | inst_sra;
 assign src1_is_pc   = inst_jal;
 assign src2_is_imm  = inst_addiu | inst_lui | inst_lw | inst_sw;
 assign src2_is_8    = inst_jal;
-assign res_from_mem = inst_lw;   //是这个
+assign res_from_mem = inst_lw;
 assign dst_is_r31   = inst_jal;
 assign dst_is_rt    = inst_addiu | inst_lui | inst_lw;
 assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr;
