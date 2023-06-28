@@ -104,6 +104,7 @@ wire        rs_eq_rt;
 
 assign br_bus       = {br_taken,br_target};
 /*********************************************/
+wire       signed_op;
 reg        ds_ex;
 reg [ 4:0] ds_excode;
 wire       inst_undef;  // indicate whether the instruction is undefined or not
@@ -130,8 +131,11 @@ always @(*) begin
         ds_excode <= 5'hxx; // ! do need to be undetermined? 
     end
 end
+
+assign signed_op = ~func[0];
 /**********************************************/
-assign ds_to_es_bus = {ds_ex,
+assign ds_to_es_bus = {signed_op,     // Whether the operator is signed
+                       ds_ex,
                        ds_excode,
                        alu_op      ,  //135:124
                        res_from_mem,  //123:123
