@@ -4,12 +4,12 @@ module cp0(
     input         clk,
     input         reset,
     input  [5:0]  ext_int_in,
-
+    
     // from WB_stage to cp0_register
     input  [`WB_TO_CP0_REGISTER_BUS_WD -1:0] wb_to_cp0_register_bus,
 
     // from cp0_register to WB_stage, used in MTF0(read)
-    output [`CP0_REGISTER_BUS_WD       -1:0] cp0_register
+    output [31:0] rdata
 
 );
 
@@ -20,8 +20,8 @@ wire        wb_bd;        // whether the instruction that generated the exceptio
 wire [31:0] wb_pc;        // pc of the instruction that generated the exception
 // MTC0(write) signal
 wire        mtc0_we;      // write enable signal
-wire [31:0] c0_addr;      // write address of the coprocessor0 register
-wire [31:0] c0_wdata;     // write data 
+wire [ 4:0] c0_waddr;    // write address of the coprocessor0 register
+wire [31:0] c0_wdata;   // write data 
 // ERET interface
 wire        eret_flush;
 assign {wb_ex,
@@ -30,7 +30,7 @@ assign {wb_ex,
         wb_bd,
         wb_pc,
         mtc0_we,
-        c0_addr,
+        c0_waddr,
         c0_wdata,
         eret_flush
        } = wb_to_cp0_register_bus;
@@ -48,6 +48,16 @@ assign cp0_register = {c0_badvaddr,
                        c0_cause_excode
 
                         };
+
+wire [31:0] addr_d;
+decoder_5_32 u_dec2(.in(addr  ), .out(addr_d  ));
+
+assign rdata = addr_d[`CR_BADVADDR] ? c0_badvaddr :
+               addr_d[`CR_COUNT]    ? c0_count    :
+               addr_d[`CR_COMPARE]  ? c0_compare  :
+               addr_d[`CR_STATUS]   ? {9'h000, c0_status_bev, 6'h00, c0_status_im, 6'h00, c0_status_exl, c0_status_ie} :
+               addr_d[`CR_CAUSE]    ? {c0_cause_bd, c0_cause_ti, 14'h0000, c0_cause_ip, 1'b0, c0_cause_excode, 2'b00}  :
+               addr_d[`CR_EPC]      ? c0_epc      : 32'h0000_0000; // to be continued(other cp0 registers)
 
 reg [31:0] c0_badvaddr;
 reg [31:0] c0_count;
@@ -82,7 +92,7 @@ always @(posedge clk)begin
     if (reset) tick <= 1'b0;
     else       tick <= ~tick;
 
-    if (mtc0_we && c0_addr==`CR_COUNT)
+    if (mtc0_we && c0_waddr==`CR_COUNT)
         c0_count <= c0_wdata;
     else if(tick)
         c0_count <= c0_count + 1'b1;
@@ -90,13 +100,13 @@ end
 
 // c0_compare
 always @(posedge clk)begin
-    if (mtc0_we && c0_addr==`CR_COMPARE)
+    if (mtc0_we && c0_waddr==`CR_COMPARE)
         c0_compare <= c0_wdata;
 end
 
 // c0_status_im
 always @(posedge clk)begin
-    if (mtc0_we && c0_addr==`CR_STATUS)
+    if (mtc0_we && c0_waddr==`CR_STATUS)
         c0_status_im <= c0_wdata[15:8];
 end
 
@@ -108,7 +118,7 @@ always @(posedge clk)begin
         c0_status_exl <= 1'b1;
     else if (eret_flush)
         c0_status_exl <= 1'b0;
-    else if (mtc0_we && c0_addr==`CR_STATUS)
+    else if (mtc0_we && c0_waddr==`CR_STATUS)
         c0_status_im <= c0_wdata[1];
 end
 
@@ -116,7 +126,7 @@ end
 always @(posedge clk)begin
     if (reset)
         c0_status_ie <= 1'b0;
-    else if (mtc0_we && c0_addr==`CR_STATUS)
+    else if (mtc0_we && c0_waddr==`CR_STATUS)
         c0_status_ie <= c0_wdata[0];
 end
 
@@ -134,7 +144,7 @@ assign count_eq_compare = c0_count==c0_compare;
 always @(posedge clk)begin
     if (reset)
         c0_cause_ti <= 1'b0;
-    else if (mtc0_we && c0_addr==`CR_COMPARE)
+    else if (mtc0_we && c0_waddr==`CR_COMPARE)
         c0_cause_ti <= 1'b0;
     else if (count_eq_compare)
         c0_cause_ti <= 1'b1;
@@ -153,7 +163,7 @@ end
 always @(posedge clk)begin
     if (reset)
         c0_cause_ip[1:0] <= 2'b0;
-    else if (mtc0_we && c0_addr==`CR_CAUSE)
+    else if (mtc0_we && c0_waddr==`CR_CAUSE)
         c0_cause_ip[1:0] <= c0_wdata[9:8];
 end
 
@@ -169,7 +179,7 @@ end
 always @(posedge clk)begin
     if (wb_ex && !c0_status_exl)
         c0_epc <= wb_bd ? wb_pc-3'h4 : wb_pc;
-    else if (mtc0_we && c0_addr==`CR_EPC)
+    else if (mtc0_we && c0_waddr==`CR_EPC)
         c0_epc <= c0_wdata;
 end    
 
