@@ -45,10 +45,18 @@ wire [31:0] es_pc         ;
 /***************************/
 wire        ex_from_id    ;
 wire        excode_from_id;
+wire [ 4:0] es_cp0_addr   ;
+wire        mtc0_we_from_id;
+wire        mtc0_we_es    ;
 
-assign {ex_from_id,
-        excode_from_id,
+assign mtc0_we_es = mtc0_we_from_id;
+
+assign {mtc0_we_from_id,
+        es_cp0_addr    ,
+        ex_from_id     ,
+        excode_from_id ,
         es_alu_op      ,  //135:124
+        es_cp0_op      ,  // mfc0: load the value of CP0[rd,sel] to R[rt]
         es_load_op     ,  //123:123
         es_src1_is_sa  ,  //122:122
         es_src1_is_pc  ,  //121:121
@@ -68,8 +76,9 @@ wire [31:0] es_alu_src2   ;
 wire [31:0] es_alu_result ;
 
 wire        es_res_from_mem;
-
+wire        es_res_from_cp0;
 assign es_res_from_mem = es_load_op;
+assign es_res_from_cp0 = es_cp0_op ;
 /*************************************************/
 reg        overflow       ;
 reg        es_ex          ;
@@ -110,12 +119,17 @@ always @(*) begin
         es_excode <= 5'hxx; // ! do need to be undetermined? 
     end
 end
-assign es_to_ms_bus = {es_ex,
-                       es_excode,
+
+assign es_to_ms_bus = {mtc0_we_es     ,
+                       es_cp0_addr    ,
+                       es_ex          ,
+                       es_excode      ,
+                       es_res_from_cp0,
                        es_res_from_mem,  //70:70
                        es_gr_we       ,  //69:69
                        es_dest        ,  //68:64
                        es_alu_result  ,  //63:32
+                       es_rt_value    ,  // used for the mtc0
                        es_pc             //31:0
                       };
 

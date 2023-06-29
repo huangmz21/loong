@@ -16,6 +16,7 @@
     `define EX_ADEL         4
     `define EX_ADES         5
 
+    `define CR_BADVADDR     8
     `define CR_COUNT        9
     `define CR_COMPARE      11
     `define CR_STATUS       12
