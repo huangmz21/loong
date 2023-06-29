@@ -24,7 +24,9 @@ module wb_stage(
     output [31:0] debug_wb_pc     ,
     output [ 3:0] debug_wb_rf_wen ,
     output [ 4:0] debug_wb_rf_wnum,
-    output [31:0] debug_wb_rf_wdata
+    output [31:0] debug_wb_rf_wdata,
+
+    output        ws_ex  //Used as a signal of flushing the pipeline
 );
 
 reg         ws_valid;
@@ -80,7 +82,7 @@ assign wb_to_cp0_register_bus = {ws_ex,
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || ws_ex) begin
         ws_valid <= 1'b0;
     end
     else if (ws_allowin) begin

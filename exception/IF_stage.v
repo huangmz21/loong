@@ -16,7 +16,8 @@ module if_stage(
     output [ 3:0] inst_sram_wen  ,
     output [31:0] inst_sram_addr ,
     output [31:0] inst_sram_wdata,
-    input  [31:0] inst_sram_rdata
+    input  [31:0] inst_sram_rdata,
+    input         ex_from_ws        //Need to flush
 );
 
 reg         fs_valid;
@@ -54,7 +55,7 @@ assign fs_ready_go    = 1'b1;
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go;
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || ex_from_ws) begin
         fs_valid <= 1'b0;
     end
     else if (fs_allowin) begin
@@ -62,7 +63,10 @@ always @(posedge clk) begin
     end
 
     if (reset) begin
-        fs_pc <= 32'hbfbffffc;  //trick: to make nextpc be 0xbfc00000 during reset 
+        fs_pc <= 32'hbfbf_fffc;  //trick: to make nextpc be 0xbfc00000 during reset 
+    end
+    else if (ex_from_ws) begin
+        fs_pc <= 32'hbfc0_037c;  //jump to the exception handler
     end
     else if (to_fs_valid && fs_allowin) begin
         fs_pc <= nextpc;
