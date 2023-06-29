@@ -22,7 +22,9 @@ module exe_stage(
     output        data_sram_en   ,
     output [ 3:0] data_sram_wen  ,
     output [31:0] data_sram_addr ,
-    output [31:0] data_sram_wdata
+    output [31:0] data_sram_wdata,
+
+    input         ex_from_ws        //Need to flush
 );
 
 reg         es_valid      ;
@@ -147,7 +149,7 @@ assign es_ready_go    = 1'b1;
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || ex_from_ws) begin
         es_valid <= 1'b0;
     end
     else if (es_allowin) begin

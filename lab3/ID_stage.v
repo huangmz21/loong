@@ -56,6 +56,7 @@ wire [15:0] imm;
 wire [31:0] rs_value;
 wire [31:0] rt_value;
 
+//½âÂë³öµÄÄÚÈİ
 wire [ 5:0] op;
 wire [ 4:0] rs;
 wire [ 4:0] rt;
@@ -93,6 +94,7 @@ wire        inst_jr;
 wire        dst_is_r31;  
 wire        dst_is_rt;   
 
+//¶ÁÈ¡µÄ¼Ä´æÆ÷ÄÚÈİ
 wire [ 4:0] rf_raddr1;
 wire [31:0] rf_rdata1;
 wire [ 4:0] rf_raddr2;
@@ -100,10 +102,11 @@ wire [31:0] rf_rdata2;
 
 wire        rs_eq_rt;
 
+//·µ»ØÉÏ¼¶µÄbranchÄÚÈİ
 assign br_bus       = {br_taken,br_target};
 
 assign ds_to_es_bus = {alu_op      ,  //135:124
-                       //load_op     ,  //123:123   è¿™ä¸ªæ‚¬ç©ºäº† 
+                       //load_op     ,  //123:123   Õâ¸öĞü¿ÕÁË 
                        res_from_mem,  //123:123
                        src1_is_sa  ,  //122:122
                        src1_is_pc  ,  //121:121
@@ -121,7 +124,7 @@ assign ds_to_es_bus = {alu_op      ,  //135:124
 assign ds_ready_go    = 1'b1;
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
-//è¿™é‡Œçš„vaildä¿¡å·bug2
+//ÕâÀïµÄvaildĞÅºÅbug2
 always @(posedge clk) begin
     if (reset) begin
         ds_valid <= 1'b0;
@@ -183,13 +186,13 @@ assign alu_op[ 9] = inst_srl;
 assign alu_op[10] = inst_sra;
 assign alu_op[11] = inst_lui;
 
-//bug1,Loadæ‚¬ç©º
+//bug1,LoadĞü¿Õ
 
 assign src1_is_sa   = inst_sll   | inst_srl | inst_sra;
 assign src1_is_pc   = inst_jal;
 assign src2_is_imm  = inst_addiu | inst_lui | inst_lw | inst_sw;
 assign src2_is_8    = inst_jal;
-assign res_from_mem = inst_lw;   //æ˜¯è¿™ä¸ª
+assign res_from_mem = inst_lw;   //ÊÇÕâ¸ö
 assign dst_is_r31   = inst_jal;
 assign dst_is_rt    = inst_addiu | inst_lui | inst_lw;
 assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr;

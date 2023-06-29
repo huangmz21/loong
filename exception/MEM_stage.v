@@ -13,7 +13,9 @@ module mem_stage(
     output                         ms_to_ws_valid,
     output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
     //from data-sram
-    input  [31                 :0] data_sram_rdata
+    input  [31                 :0] data_sram_rdata,
+
+    input                          ex_from_ws        //Need to flush
 );
 
 reg         ms_valid;
@@ -70,7 +72,7 @@ assign ms_ready_go    = 1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || ex_from_ws) begin
         ms_valid <= 1'b0;
     end
     else if (ms_allowin) begin
