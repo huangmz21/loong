@@ -118,6 +118,7 @@ wire        rs_eq_rt;
 
 assign br_bus       = {br_taken,br_target};
 /*********************************************/
+wire       signed_op;
 reg        ds_ex;
 reg [ 4:0] ds_excode;
 wire       inst_undef;  // indicate whether the instruction is undefined or not
@@ -144,9 +145,12 @@ always @(*) begin
         ds_excode <= 5'hxx; // ! do need to be undetermined? 
     end
 end
+
+assign signed_op = ~func[0];
 /**********************************************/
 assign ds_to_es_bus = {inst_mtc0   ,  // we of mtc0 passing to WB_stage
                        cp0_addr    ,  // address of the coprocessor0 register that the instruction wants to read or write
+                       signed_op   ,  // Whether the operator is signed
                        ds_ex       ,
                        ds_excode   ,
                        alu_op      ,  //135:124

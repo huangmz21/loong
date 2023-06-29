@@ -45,6 +45,8 @@ wire [31:0] es_pc         ;
 /***************************/
 wire        ex_from_id    ;
 wire        excode_from_id;
+wire        signed_from_id;
+
 wire [ 4:0] es_cp0_addr   ;
 wire        mtc0_we_from_id;
 wire        mtc0_we_es    ;
@@ -53,6 +55,7 @@ assign mtc0_we_es = mtc0_we_from_id;
 
 assign {mtc0_we_from_id,
         es_cp0_addr    ,
+        signed_from_id ,
         ex_from_id     ,
         excode_from_id ,
         es_alu_op      ,  //135:124
@@ -86,13 +89,13 @@ reg [ 4:0] es_excode      ;
 // overflow logic part
 // ! when alu is unsigned?
 always @(*) begin
-    if      (es_alu_op[ 0] && ~es_alu_src1[31] && ~es_alu_src2[31] && es_alu_result[31] )
+    if      (signed_from_id && es_alu_op[ 0] && ~es_alu_src1[31] && ~es_alu_src2[31] && es_alu_result[31] )
         overflow  <= 1'b1;
-    else if (es_alu_op[ 0] && es_alu_src1[31]  && es_alu_src2[31]  && ~es_alu_result[31]) 
+    else if (signed_from_id && es_alu_op[ 0] && es_alu_src1[31]  && es_alu_src2[31]  && ~es_alu_result[31]) 
         overflow  <= 1'b1;
-    else if (es_alu_op[ 1] && es_alu_src1[31]  && ~es_alu_src2[31] && ~es_alu_result[31]) 
+    else if (signed_from_id && es_alu_op[ 1] && es_alu_src1[31]  && ~es_alu_src2[31] && ~es_alu_result[31]) 
         overflow  <= 1'b1;
-    else if (es_alu_op[ 1] && ~es_alu_src1[31] && es_alu_src2[31]  && es_alu_result[31]) 
+    else if (signed_from_id && es_alu_op[ 1] && ~es_alu_src1[31] && es_alu_src2[31]  && es_alu_result[31]) 
         overflow  <= 1'b1;
     else overflow <= 1'b0;
 end
