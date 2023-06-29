@@ -51,6 +51,16 @@ wire        src1_is_pc;
 wire        src2_is_imm;
 wire        src2_is_8;
 wire        res_from_mem;
+/**************************/
+wire        res_from_cp0;
+wire [ 4:0] cp0_addr;       // address of the coprocessor0 register that the instruction wants to read or write
+assign cp0_addr = (rd_d[5'h08] & (sel==3'b000)) ? `CR_BADVADDR : 
+                  (rd_d[5'h09] & (sel==3'b000)) ? `CR_COUNT    : 
+                  (rd_d[5'h0b] & (sel==3'b000)) ? `CR_COMPARE  : 
+                  (rd_d[5'h0c] & (sel==3'b000)) ? `CR_STATUS   : 
+                  (rd_d[5'h0d] & (sel==3'b000)) ? `CR_CAUSE    : 
+                  (rd_d[5'h0e] & (sel==3'b000)) ? `CR_EPC      : 5'h00 ;  // ! to be continued(other cp0 registers)
+/**************************/
 wire        gr_we;
 wire        mem_we;
 wire [ 4:0] dest;
@@ -64,6 +74,7 @@ wire [ 4:0] rt;
 wire [ 4:0] rd;
 wire [ 4:0] sa;
 wire [ 5:0] func;
+wire [ 2:0] sel;
 wire [25:0] jidx;
 wire [63:0] op_d;
 wire [31:0] rs_d;
@@ -71,6 +82,7 @@ wire [31:0] rt_d;
 wire [31:0] rd_d;
 wire [31:0] sa_d;
 wire [63:0] func_d;
+
 
 wire        inst_addu;
 wire        inst_subu;
@@ -91,6 +103,8 @@ wire        inst_beq;
 wire        inst_bne;
 wire        inst_jal;
 wire        inst_jr;
+wire        inst_mfc0;
+wire        inst_mtc0;
 
 wire        dst_is_r31;  
 wire        dst_is_rt;   
@@ -134,10 +148,13 @@ end
 
 assign signed_op = ~func[0];
 /**********************************************/
-assign ds_to_es_bus = {signed_op,     // Whether the operator is signed
-                       ds_ex,
-                       ds_excode,
+assign ds_to_es_bus = {inst_mtc0   ,  // we of mtc0 passing to WB_stage
+                       cp0_addr    ,  // address of the coprocessor0 register that the instruction wants to read or write
+                       signed_op   ,  // Whether the operator is signed
+                       ds_ex       ,
+                       ds_excode   ,
                        alu_op      ,  //135:124
+                       res_from_cp0,  // mfc0: load the value of CP0[rd,sel] to R[rt]
                        res_from_mem,  //123:123
                        src1_is_sa  ,  //122:122
                        src1_is_pc  ,  //121:121
@@ -176,6 +193,7 @@ assign sa   = ds_inst[10: 6];
 assign func = ds_inst[ 5: 0];
 assign imm  = ds_inst[15: 0];
 assign jidx = ds_inst[25: 0];
+assign sel  = ds_inst[ 2: 0];
 
 decoder_6_64 u_dec0(.in(op  ), .out(op_d  ));
 decoder_6_64 u_dec1(.in(func), .out(func_d));
@@ -207,6 +225,8 @@ assign inst_jr     = op_d[6'h00] & func_d[6'h08] & rt_d[5'h00] & rd_d[5'h00] & s
 /*******************************/
 assign inst_syscall = op_d[6'h00] & func_d[6'h0c];
 assign inst_break   = op_d[6'h00] & func_d[6'h0d];
+assign inst_mfc0    = op_d[6'h10] & rs_d[5'h00] & sa_d[5'h00] & (func_d[6'h00] | func_d[6'h01] | func_d[6'h02] | func_d[6'h03] | func_d[6'h04] | func_d[6'h05] | func_d[6'h06] | func_d[6'h07]);
+assign inst_mtc0    = op_d[6'h10] & rs_d[5'h04] & sa_d[5'h00] & (func_d[6'h00] | func_d[6'h01] | func_d[6'h02] | func_d[6'h03] | func_d[6'h04] | func_d[6'h05] | func_d[6'h06] | func_d[6'h07]);
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal;
 assign alu_op[ 1] = inst_subu;
@@ -226,9 +246,12 @@ assign src1_is_pc   = inst_jal;
 assign src2_is_imm  = inst_addiu | inst_lui | inst_lw | inst_sw;
 assign src2_is_8    = inst_jal;
 assign res_from_mem = inst_lw;
+/*****************************/
+assign res_from_cp0 = inst_mfc0;
+/*****************************/
 assign dst_is_r31   = inst_jal;
-assign dst_is_rt    = inst_addiu | inst_lui | inst_lw;
-assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr;
+assign dst_is_rt    = inst_addiu | inst_lui | inst_lw | inst_mfc0;
+assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr & ~inst_mtc0;
 assign mem_we       = inst_sw;
 
 assign dest         = dst_is_r31 ? 5'd31 :
