@@ -32,11 +32,11 @@ module exe_stage(
     
 );
 
- (* keep = "true" *) reg         es_valid      ;
+ reg         es_valid      ;
  assign es_valid_tohazard = es_valid;
 wire        es_ready_go   ;
 
- (* keep = "true" *) reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
+reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 reg [2*5-1:0] ds_to_es_addr_r; 
 wire [11:0] es_alu_op     ;
 wire        es_load_op    ;
@@ -58,11 +58,6 @@ wire[1:0] es_f_ctrl1;
 wire[1:0] es_f_ctrl2;
 // addr
 assign es_to_ms_addr = ds_to_es_addr_r;
-//wire [4:0] es_rf_raddr1;
-//wire [4:0] es_rf_raddr2;
-//assign {es_rf_raddr1,  //9:5
- //       es_rf_raddr2  //4:0
-  //      }=ds_to_es_addr_r;
 
 assign {es_f_ctrl1,   //3:2
         es_f_ctrl2   //1:0
@@ -86,10 +81,7 @@ assign es_mem_we_tohazard = es_mem_we;
 wire [31:0] es_alu_src1   ;
 wire [31:0] es_alu_src2   ;
 wire [31:0] es_alu_result ;
-//
 wire        es_res_from_mem;
-//assign es_gr_we = es_gr_we && es_valid;
-//assign es_mem_we = es_mem_we && es_valid;
 assign es_res_from_mem = es_load_op && es_valid;
 //输出的时候和valid 做与运算
 assign es_to_ms_bus = {es_res_from_mem ,//&& !(stallE==2'b10),  //70:70
@@ -132,7 +124,7 @@ assign es_alu_src2 = es_src2_is_imm ? {{16{es_imm[15]}}, es_imm[15:0]} :
 
 alu u_alu(
     .alu_op     (es_alu_op    ),
-    .alu_src1   (es_alu_src1  ),   //这里数据源开始时2,bug3
+    .alu_src1   (es_alu_src1  ),   
     .alu_src2   (es_alu_src2  ),
     .alu_result (es_alu_result)
     );

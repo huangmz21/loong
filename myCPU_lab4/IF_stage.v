@@ -7,7 +7,6 @@ module if_stage(
     input                          ds_allowin     ,
     //brbus
     input  [`BR_BUS_WD       -1:0] br_bus         ,
-    //input  [`BR_BUS_WD       :0] br_bus         ,
     //to ds
     output                         fs_to_ds_valid ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,

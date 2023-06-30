@@ -54,7 +54,6 @@ wire [32-1:0] mem_result;
 wire ms_res_from_mem;
 
 //stall
-//wire [1:0] stallF;
 wire [1:0] stallD;
 wire [1:0] stallE;
 
@@ -76,7 +75,6 @@ if_stage if_stage(
     .inst_sram_wdata(inst_sram_wdata),
     .inst_sram_rdata(inst_sram_rdata)
     //stall unit
-    //.stallF          (stallF          )
 );
 // ID stage
 id_stage id_stage(
@@ -125,7 +123,6 @@ exe_stage exe_stage(
     //forward datapath
     .es_forward_ms  (es_forward_ms  ),
     .es_forward_ws  (es_forward_ws  ),
-    //.mem_result(ms_to_ws_bus[63:32]),
     //forward control
     .es_forward_ctrl(es_forward_ctrl),
     .es_mem_we_tohazard(es_mem_we),
@@ -155,10 +152,7 @@ mem_stage mem_stage(
     //forward 
     .ms_res_from_mem(ms_res_from_mem),
     .ds_forward_bus(ds_forward_bus),
-    .es_forward_ms(es_forward_ms)
-    //.es_to_ms_addr(es_to_ms_addr),
-    //.ms_to_ws_addr(ms_to_ws_addr)
-    
+    .es_forward_ms(es_forward_ms)    
 );
 // WB stage
 wb_stage wb_stage(
@@ -212,7 +206,6 @@ hazard hazard (
     //stall and flush
     //00=normal，01=stall，10=flush
     .stallD(stallD),
-    //.stallF(stallF),
     .stallE(stallE)
 );
 

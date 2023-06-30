@@ -19,9 +19,6 @@ module mem_stage(
     output [32-1:0] ds_forward_bus,
     output [32-1:0] es_forward_ms,
     output ms_res_from_mem
-    //input  [2*5              -1:0] es_to_ms_addr ,
-    //output [2*5              -1:0] ms_to_ws_addr 
-
 );
 
  (* keep = "true" *) reg         ms_valid;
@@ -29,8 +26,7 @@ wire        ms_ready_go;
 
  (* keep = "true" *) reg [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus_r;
 
-//
-//wire        ms_res_from_mem;
+
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
@@ -44,10 +40,6 @@ assign {ms_res_from_mem,  //70:70
 
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
-//
-//assign ms_gr_we =ms_gr_we && ms_valid;
-//assign ms_res_from_mem = ms_res_from_mem && ms_valid;
-//
 assign ms_to_ws_bus = {ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
                        ms_final_result,  //63:32

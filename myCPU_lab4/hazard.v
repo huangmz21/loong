@@ -55,8 +55,7 @@ assign ds_forward_ctrl={ds_f_ctrl1,  //1:1
                         ds_f_ctrl2   //0:0
                            };
 //ID stall
-//include change-beq stall , lw-use stall
-//reg [1:0] sF;
+//include change-beq stall 
 reg [1:0] sD;
 reg [1:0] sE;
 //assign stallF=sF;
@@ -66,15 +65,12 @@ always @(*)
 begin
     if(ifbranch &&  es_valid
        &&( es_gr_we && (rf_raddr1==es_dest || rf_raddr2==es_dest))
-       //||(ms_res_from_mem && (rf_raddr1==ms_dest || rf_raddr2 == ms_dest)))
     ) //如果该条是条件跳转指令，而且上一条为R或者LW,则在EXE处stall,注：上上条为lw的情况不阻塞
     begin
-        //sF=2'b01;
         sD=2'b01;
         sE=2'b00;
     end
     else begin
-        //sF=2'b00;
         sD=2'b00;
         sE=2'b00;
     end
@@ -82,7 +78,7 @@ end
 
 
 //EX forward ,deal with alu_use
-//如果是mem阶段的用01，如果是wb阶段的用10，如果都不是用00,如果是Lw_sw用11
+//如果是mem阶段的用01，如果是wb阶段的用10，如果都不是用00
 reg [1:0]es_f_ctrl1;
 reg [1:0]es_f_ctrl2;
 always @(*) begin
@@ -94,9 +90,9 @@ always @(*) begin
         es_f_ctrl1=2'b00;
 end
 always @(*) begin
-    if(es_rf_raddr2!=0 && ms_gr_we && es_rf_raddr2==ms_dest) //上一条R型，从mem转发到exe，exe执行R或者sw
+    if(es_rf_raddr2!=0 && ms_gr_we && es_rf_raddr2==ms_dest) //从mem转发到exe
         es_f_ctrl2=2'b01;
-    else if(es_rf_raddr2!=0 && ws_gr_we && es_rf_raddr2==ws_dest)//上上一条R型，从wb转发到exe
+    else if(es_rf_raddr2!=0 && ws_gr_we && es_rf_raddr2==ws_dest)//从wb转发到exe
         es_f_ctrl2=2'b10;
     else 
         es_f_ctrl2=2'b00;

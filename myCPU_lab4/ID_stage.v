@@ -29,11 +29,11 @@ module id_stage(
 
 );
 
- (* keep = "true" *) reg         ds_valid   ;
+reg         ds_valid   ;
 wire        ds_ready_go;
 
 wire [31                 :0] fs_pc;
- (* keep = "true" *) reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
+reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_inst;
@@ -53,7 +53,6 @@ wire        br_taken;
 wire [31:0] br_target;
 
 wire [11:0] alu_op;
-//wire        load_op;
 wire        src1_is_sa;
 wire        src1_is_pc;
 wire        src2_is_imm;
@@ -127,7 +126,6 @@ wire        rs_eq_rt;
 assign br_bus       = {br_taken,br_target};
 
 assign ds_to_es_bus = {alu_op      ,  //135:124
-                       //load_op     ,  //123:123   这个悬空了 
                        res_from_mem,  //123:123
                        src1_is_sa  ,  //122:122
                        src1_is_pc  ,  //121:121
@@ -141,11 +139,10 @@ assign ds_to_es_bus = {alu_op      ,  //135:124
                        rt_value    ,  //63 :32
                        ds_pc          //31 :0
                       };
-
+//此处是阻塞操作
 assign ds_ready_go    = 1'b1;
 assign ds_allowin     = (stallD==2'b01)?1'b0:
                         (stallD==2'b10)?1'b1:(!ds_valid || ds_ready_go && es_allowin);
-
 assign ds_to_es_valid = (stallD==2'b01)?1'b0:
                         (stallD==2'b10)?1'b0:(ds_valid && ds_ready_go);
 //这里是flush操作
