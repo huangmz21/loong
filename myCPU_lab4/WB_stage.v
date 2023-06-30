@@ -10,6 +10,8 @@ module wb_stage(
     input  [`MS_TO_WS_BUS_WD -1:0]  ms_to_ws_bus  ,
     //to rf: for write back
     output [`WS_TO_RF_BUS_WD -1:0]  ws_to_rf_bus  ,
+    //forwardpath
+    output [32-1:0]                 es_forward_ws,
     //trace debug interface
     output [31:0] debug_wb_pc     ,
     output [ 3:0] debug_wb_rf_wen ,
@@ -57,6 +59,7 @@ end
 assign rf_we    = ws_gr_we&&ws_valid;
 assign rf_waddr = ws_dest;
 assign rf_wdata = ws_final_result;
+assign es_forward_ws = ws_final_result;
 
 // debug info generate
 assign debug_wb_pc       = ws_pc;

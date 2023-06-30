@@ -19,9 +19,13 @@ always @(posedge clk) begin
 end
 
 //READ OUT 1
-assign rdata1 = (raddr1==5'b0) ? 32'b0 : rf[raddr1];
+assign rdata1 = (raddr1==5'b0) ? 32'b0 : 
+                (waddr==raddr1 && we)? wdata :
+                rf[raddr1];
 
 //READ OUT 2
-assign rdata2 = (raddr2==5'b0) ? 32'b0 : rf[raddr2];
+assign rdata2 = (raddr2==5'b0) ? 32'b0 :
+                (waddr==raddr2 && we)? wdata:
+                 rf[raddr2];
 
 endmodule

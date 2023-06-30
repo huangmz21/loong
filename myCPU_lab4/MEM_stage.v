@@ -16,9 +16,11 @@ module mem_stage(
     //from data-sram
     input  [31                 :0] data_sram_rdata,
     //forward
-    output ms_res_from_mem,
-    input  [2*5              -1:0] es_to_ms_addr ,
-    output [2*5              -1:0] ms_to_ws_addr 
+    output [32-1:0] ds_forward_bus,
+    output [32-1:0] es_forward_ms,
+    output ms_res_from_mem
+    //input  [2*5              -1:0] es_to_ms_addr ,
+    //output [2*5              -1:0] ms_to_ws_addr 
 
 );
 
@@ -33,7 +35,6 @@ wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc;
-
 assign {ms_res_from_mem,  //70:70
         ms_gr_we       ,  //69:69
         ms_dest        ,  //68:64
@@ -44,8 +45,8 @@ assign {ms_res_from_mem,  //70:70
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 //
-assign ms_gr_we =ms_gr_we && ms_valid;
-assign ms_res_from_mem = ms_res_from_mem && ms_valid;
+//assign ms_gr_we =ms_gr_we && ms_valid;
+//assign ms_res_from_mem = ms_res_from_mem && ms_valid;
 //
 assign ms_to_ws_bus = {ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
@@ -73,5 +74,7 @@ assign mem_result = data_sram_rdata;
 
 assign ms_final_result = ms_res_from_mem ? mem_result
                                          : ms_alu_result;
+assign ds_forward_bus = ms_final_result;  
+assign es_forward_ms = ms_final_result;                                       
 
 endmodule

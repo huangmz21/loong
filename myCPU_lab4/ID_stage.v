@@ -18,12 +18,13 @@ module id_stage(
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus,
 
     //forward datapath
-    input [`FORWARD_BUS_WD-1:0] ds_forward_bus,
+    input [32-1:0] ds_forward_bus,
     //forward control
     input[2-1:0] ds_forward_ctrl,
     //stall
     input [1:0]stallD, 
-    output [10                -1:0] ds_to_es_addr
+    output [10                -1:0] ds_to_es_addr,
+    output ifbranch
 
 
 );
@@ -68,18 +69,15 @@ wire [31:0] rt_value;
 wire [31:0] ms_to_ds_fvalue1;
 wire [31:0] ms_to_ds_fvalue2;
 //forward ctrl
-wire f_ctrl1;
-wire f_ctrl2;
+wire ds_f_ctrl1;
+wire ds_f_ctrl2;
 
 assign {
-    f_ctrl1,      //1:1
-    f_ctrl2      //0:0
+    ds_f_ctrl1,      //1:1
+    ds_f_ctrl2      //0:0
 }=ds_forward_ctrl;
 
-assign {
-    ms_to_ds_fvalue1,   //9:5
-    ms_to_ds_fvalue2   //4;0
-}=ds_forward_bus;
+
 
 wire [ 5:0] op;
 wire [ 4:0] rs;
@@ -145,30 +143,25 @@ assign ds_to_es_bus = {alu_op      ,  //135:124
                       };
 
 assign ds_ready_go    = 1'b1;
-assign ds_allowin     = (stallD==2'b00)?!ds_valid || ds_ready_go && es_allowin:
-                        (stallD==2'b01)?1'b0:
-                        (stallD==2'b10)?1'b1:1'b1;
+assign ds_allowin     = (stallD==2'b01)?1'b0:
+                        (stallD==2'b10)?1'b1:(!ds_valid || ds_ready_go && es_allowin);
 
-assign ds_to_es_valid = ds_valid && ds_ready_go;
-
+assign ds_to_es_valid = (stallD==2'b01)?1'b0:
+                        (stallD==2'b10)?1'b0:(ds_valid && ds_ready_go);
+//这里是flush操作
 always @(posedge clk) begin
     if (reset) begin
         ds_valid <= 1'b0;
     end
-    else
-    begin
-         if (stallD!=2'b10 ) 
-         begin
-           ds_valid <= fs_to_ds_valid && ds_allowin;
-         end
-         else
-           ds_valid <= 1'b0; 
+   else if (ds_allowin) begin
+        ds_valid <= fs_to_ds_valid;
     end
-    
     if (fs_to_ds_valid && ds_allowin) begin
         fs_to_ds_bus_r <= fs_to_ds_bus;
     end
 end
+
+
 
 assign op   = ds_inst[31:26];
 assign rs   = ds_inst[25:21];
@@ -255,10 +248,11 @@ assign ds_to_es_addr={
     rf_raddr2      //4:0
 };
 
-assign rs_value = f_ctrl1?ms_to_ds_fvalue1:rf_rdata1;
-assign rt_value = f_ctrl2?ms_to_ds_fvalue2:rf_rdata2;
+assign rs_value = ds_f_ctrl1?ds_forward_bus:rf_rdata1;
+assign rt_value = ds_f_ctrl2?ds_forward_bus:rf_rdata2;
 
 assign rs_eq_rt = (rs_value == rt_value);
+assign ifbranch =(inst_beq || inst_bne) ;
 assign br_taken = (   inst_beq  &&  rs_eq_rt
                    || inst_bne  && !rs_eq_rt
                    || inst_jal
