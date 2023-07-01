@@ -6,13 +6,13 @@ module hilo(
     output [31:0] h_rdata,
     output [31:0] l_rdata
 );
-reg [1:0] hilo[31:0];
+reg [31:0] hilo[1:0];
 
 always @(posedge clk) begin
     if(hl_we[1])
         hilo[1]<=h_wdata;
     if(hl_we[0])
-        hilo[0]<=h_wdata;
+        hilo[0]<=l_wdata;
 
 end
 

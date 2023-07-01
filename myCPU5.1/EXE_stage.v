@@ -43,8 +43,10 @@ wire [11:0] es_alu_op     ;
 wire [3:0]  es_mudi;
 wire [1:0]  es_hl_we;
 wire        es_tvalid;
+wire        es_tready;
 wire        es_tvalid_out;
 wire        es_tvalidu;
+wire        es_treadyu;
 wire        es_tvalid_outu;
 //wire        es_stop;
 reg         diva;
@@ -123,7 +125,7 @@ wire [31:0] es_h_wdata   ;
 wire [31:0] es_l_wdata   ;
 wire [31:0] es_h_rdata   ;
 wire [31:0] es_l_rdata   ;
-
+reg es_tvalid_r;
 // always @(posedge clk)begin
 //     if(reset)
 //         diva<=0;
@@ -132,9 +134,18 @@ wire [31:0] es_l_rdata   ;
 //     else 
 //         diva<=0;
 // end
+always @(posedge clk) begin 
+    if (reset) begin
+        es_tvalid_r <= 1'b0;
+    end
+    else if(!es_tvalid_r && es_valid && es_mudi[2])
+        es_tvalid_r <= 1'b1;
+    else if(es_tvalid_r && es_valid)
+        es_tvalid_r <= ~es_tready;
+end
 
-assign es_tvalid  = (es_mudi[2] & ~diva);
-assign es_tvalidu = (es_mudi[3] & ~diva);
+// assign es_tvalid  = (es_mudi[2] & ~diva);
+// assign es_tvalidu = (es_mudi[3] & ~diva);
 //////0
 
 wire        es_res_from_mem;
@@ -157,7 +168,7 @@ assign es_to_ms_valid =  (stallE==2'b01)?1'b0:
 always @(posedge clk) begin
     if (reset) begin
         es_valid <= 1'b0;
-        diva<=0;
+        //diva<=0;
     end
   else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
@@ -166,10 +177,11 @@ always @(posedge clk) begin
         ds_to_es_bus_r <= ds_to_es_bus;
         ds_to_es_addr_r<=ds_to_es_addr;//这个寄存器用来存储上一个周期的地址，用于forward
     end
-    if(es_tvalid | es_tvalidu)
-        diva<=1;
-    else 
-        diva<=0;
+    // if(es_tvalid | es_tvalidu)
+    //     diva<=1;
+    // //else
+    // else if(~es_tvalid_out | ~es_tvalid_outu)
+    //     diva<=0;
 end
 
 
@@ -191,11 +203,11 @@ assign es_alu_src2 = es_src2_is_simm ? {{16{es_imm[15]}}, es_imm[15:0]} :
 
 div_gen_0 div_gen_0sign(
     .aclk(clk), 
-    .s_axis_divisor_tvalid(es_tvalid), 
-    .s_axis_divisor_tready(), 
+    .s_axis_divisor_tvalid(es_tvalid_r), 
+    .s_axis_divisor_tready(es_tready), 
     .s_axis_divisor_tdata(es_alu_src2), 
-    .s_axis_dividend_tvalid(es_tvalid), 
-    .s_axis_dividend_tready(), 
+    .s_axis_dividend_tvalid(es_tvalid_r), 
+    .s_axis_dividend_tready(es_tready), 
     .s_axis_dividend_tdata(es_alu_src1), 
     .m_axis_dout_tvalid(es_tvalid_out), 
     .m_axis_dout_tdata(es_divdata)
@@ -203,10 +215,10 @@ div_gen_0 div_gen_0sign(
 divu_gen_0 div_gen_0unsign(
     .aclk(clk), 
     .s_axis_divisor_tvalid(es_tvalidu), 
-    .s_axis_divisor_tready(), 
+    .s_axis_divisor_tready(es_treadyu), 
     .s_axis_divisor_tdata(es_alu_src2), 
     .s_axis_dividend_tvalid(es_tvalidu), 
-    .s_axis_dividend_tready(), 
+    .s_axis_dividend_tready(es_treadyu), 
     .s_axis_dividend_tdata(es_alu_src1), 
     .m_axis_dout_tvalid(es_tvalid_outu), 
     .m_axis_dout_tdata(es_divdatau)
@@ -223,7 +235,8 @@ assign es_l_wdata = (es_mudi[0] | es_mudi[1]) ? es_prodata[31:0]  :
                     es_dst_is_lo ? es_alu_src1                    :
                     0;
 
-assign es_stop = (es_mudi[2] & ~es_tvalid_out) | (es_mudi[3] & ~es_tvalid_outu);
+assign es_stop = (es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu);
+//assign es_hl_we= es_hl_we & es_tvalid_out;///////////////////////////////////////////////////////////////////
 
 hilo hilo1(
     .clk(clk),
