@@ -126,26 +126,26 @@ wire [31:0] es_l_wdata   ;
 wire [31:0] es_h_rdata   ;
 wire [31:0] es_l_rdata   ;
 reg es_tvalid_r;
-// always @(posedge clk)begin
-//     if(reset)
-//         diva<=0;
-//     else if(es_tvalid)
-//         diva<=1;
-//     else 
-//         diva<=0;
-// end
-always @(posedge clk) begin 
-    if (reset) begin
-        es_tvalid_r <= 1'b0;
-    end
-    else if(!es_tvalid_r && es_valid && es_mudi[2])
-        es_tvalid_r <= 1'b1;
-    else if(es_tvalid_r && es_valid)
-        es_tvalid_r <= ~es_tready;
+always @(posedge clk)begin
+    if(reset)
+        diva<=0;
+    else if((es_tready && es_mudi[2]) | (es_treadyu && es_mudi[3]))
+        diva<=1;
+    else if(es_tvalid_out | es_tvalid_outu)
+        diva<=0;
 end
+// always @(posedge clk) begin 
+//     if (reset) begin
+//         es_tvalid_r <= 1'b0;
+//     end
+//     else if(!es_tvalid_r && es_valid && es_mudi[2])
+//         es_tvalid_r <= 1'b1;
+//     else if(es_tvalid_r && es_valid)
+//         es_tvalid_r <= ~es_tready;
+// end
 
-// assign es_tvalid  = (es_mudi[2] & ~diva);
-// assign es_tvalidu = (es_mudi[3] & ~diva);
+assign es_tvalid  = (es_mudi[2] & ~diva);
+assign es_tvalidu = (es_mudi[3] & ~diva);
 //////0
 
 wire        es_res_from_mem;
@@ -197,17 +197,26 @@ assign es_alu_src2 = es_src2_is_simm ? {{16{es_imm[15]}}, es_imm[15:0]} :
                      es_f_ctrl2==2'b01    ? es_forward_ms :
                      es_f_ctrl2==2'b10    ? es_forward_ws :
                                       es_rt_value;
-                                      assign es_prodata = es_mudi[0] ? $signed(es_alu_src1)*$signed(es_alu_src2) :
-              es_mudi[1] ? es_alu_src1*es_alu_src2                   :
-              0;
+wire [32:0] es_mul_src1;
+wire [32:0] es_mul_src2;
+assign es_mul_src1 = es_mudi[0] ? {es_alu_src1[31], es_alu_src1[31:0]} :
+                     es_mudi[1] ? {1'b0, es_alu_src1[31:0]}            :
+                     0;
+assign es_mul_src2 = es_mudi[0] ? {es_alu_src2[31], es_alu_src2[31:0]} :
+                     es_mudi[1] ? {1'b0, es_alu_src2[31:0]}            :
+                     0;
+// assign es_prodata = es_mudi[0] ? $signed(es_alu_src1)*$signed(es_alu_src2) :
+//                     es_mudi[1] ? es_alu_src1*es_alu_src2                   :
+//                     0;
+assign es_prodata = $signed(es_mul_src1)*$signed(es_mul_src2);
 
 div_gen_0 div_gen_0sign(
     .aclk(clk), 
-    .s_axis_divisor_tvalid(es_tvalid_r), 
+    .s_axis_divisor_tvalid(es_tvalid), 
     .s_axis_divisor_tready(es_tready), 
     .s_axis_divisor_tdata(es_alu_src2), 
-    .s_axis_dividend_tvalid(es_tvalid_r), 
-    .s_axis_dividend_tready(es_tready), 
+    .s_axis_dividend_tvalid(es_tvalid), 
+    .s_axis_dividend_tready(), 
     .s_axis_dividend_tdata(es_alu_src1), 
     .m_axis_dout_tvalid(es_tvalid_out), 
     .m_axis_dout_tdata(es_divdata)
@@ -218,7 +227,7 @@ divu_gen_0 div_gen_0unsign(
     .s_axis_divisor_tready(es_treadyu), 
     .s_axis_divisor_tdata(es_alu_src2), 
     .s_axis_dividend_tvalid(es_tvalidu), 
-    .s_axis_dividend_tready(es_treadyu), 
+    .s_axis_dividend_tready(), 
     .s_axis_dividend_tdata(es_alu_src1), 
     .m_axis_dout_tvalid(es_tvalid_outu), 
     .m_axis_dout_tdata(es_divdatau)
