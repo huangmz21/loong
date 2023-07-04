@@ -40,7 +40,7 @@ wire [31:0] nor_result;
 wire [31:0] or_result;
 wire [31:0] xor_result;
 wire [31:0] lui_result;
-wire [31:0] sll_result; 
+wire [31:0] sll_result;
 wire [63:0] sr64_result; 
 wire [31:0] sr_result; 
 

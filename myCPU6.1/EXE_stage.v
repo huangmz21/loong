@@ -48,7 +48,6 @@ wire        es_tvalid_out;
 wire        es_tvalidu;
 wire        es_treadyu;
 wire        es_tvalid_outu;
-wire        es_stop;
 reg         diva;
 wire        es_dst_is_hi;
 wire        es_dst_is_lo;
@@ -280,11 +279,13 @@ assign data_sram_wen   = es_mem_we_w&&es_valid ? 4'hf :
                          4'h0;
 assign data_sram_addr  = es_alu_result;
 //如果es_fctrl1
-assign data_sram_wdata = (es_f_ctrl2==2'b01)?es_forward_ms:
+wire [31:0] data_sram_wdata_t;
+assign data_sram_wdata_t = (es_f_ctrl2==2'b01)?es_forward_ms:
                          (es_f_ctrl2==2'b10)?es_forward_ws:
-                         es_mem_we_h ? {2{es_rt_value[15:0]}} :
-                         es_mem_we_b ? {4{es_rt_value[ 7:0]}} :
                          es_rt_value;
+assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
+                         es_mem_we_b ? {4{data_sram_wdata_t[ 7:0]}} :
+                         data_sram_wdata_t;
 
 //hazard unit  处理EX_MEM 和 MEM_WB 之间的数据冒险
 wire es_src1_is_ex_mem ;

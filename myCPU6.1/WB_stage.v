@@ -24,20 +24,20 @@ wire        ws_ready_go;
 
  (* keep = "true" *) reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
  //////1
-wire        ws_res_from_mem_h;
-wire        ws_res_from_mem_b;
-wire        ws_res_from_mem_sign;
-wire [1:0]  ws_whb_mux;
+// wire        ws_res_from_mem_h;
+// wire        ws_res_from_mem_b;
+// wire        ws_res_from_mem_sign;
+// wire [1:0]  ws_whb_mux;
 //////0
 wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 assign {//////1
-        ws_res_from_mem_h,  //74:74
-        ws_res_from_mem_b,  //73:73
-        ws_res_from_mem_sign,//72:72
-        ws_whb_mux,//71:70
+        // ws_res_from_mem_h,  //74:74
+        // ws_res_from_mem_b,  //73:73
+        // ws_res_from_mem_sign,//72:72
+        // ws_whb_mux,//71:70
         //////1
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
@@ -70,19 +70,7 @@ end
 
 assign rf_we    = ws_gr_we&&ws_valid;
 assign rf_waddr = ws_dest;
-assign rf_wdata = (ws_res_from_mem_h && ~ws_whb_mux[1] && ws_res_from_mem_sign) ? {{16{ws_final_result[15]}}, ws_final_result[15:0]} :
-                  (ws_res_from_mem_h && ~ws_whb_mux[1] &&~ws_res_from_mem_sign) ? {{16{1'b0}}, ws_final_result[15:0]} :
-                  (ws_res_from_mem_h &&  ws_whb_mux[1] && ws_res_from_mem_sign) ? {{16{ws_final_result[31]}}, ws_final_result[31:16]} :
-                  (ws_res_from_mem_h &&  ws_whb_mux[1] &&~ws_res_from_mem_sign) ? {{16{1'b0}}, ws_final_result[31:16]} :
-                  (ws_res_from_mem_b && ~ws_whb_mux[1] && ~ws_whb_mux[0] && ws_res_from_mem_sign) ? {{24{ws_final_result[7]}}, ws_final_result[7:0]} :
-                  (ws_res_from_mem_b && ~ws_whb_mux[1] && ~ws_whb_mux[0] &&~ws_res_from_mem_sign) ? {{24{1'b0}}, ws_final_result[7:0]} :
-                  (ws_res_from_mem_b && ~ws_whb_mux[1] &&  ws_whb_mux[0] && ws_res_from_mem_sign) ? {{24{ws_final_result[15]}}, ws_final_result[15:8]} :
-                  (ws_res_from_mem_b && ~ws_whb_mux[1] &&  ws_whb_mux[0] &&~ws_res_from_mem_sign) ? {{24{1'b0}}, ws_final_result[15:8]} :
-                  (ws_res_from_mem_b &&  ws_whb_mux[1] && ~ws_whb_mux[0] && ws_res_from_mem_sign) ? {{24{ws_final_result[23]}}, ws_final_result[23:16]} :
-                  (ws_res_from_mem_b &&  ws_whb_mux[1] && ~ws_whb_mux[0] &&~ws_res_from_mem_sign) ? {{24{1'b0}}, ws_final_result[23:16]} :
-                  (ws_res_from_mem_b &&  ws_whb_mux[1] &&  ws_whb_mux[0] && ws_res_from_mem_sign) ? {{24{ws_final_result[31]}}, ws_final_result[31:24]} :
-                  (ws_res_from_mem_b &&  ws_whb_mux[1] &&  ws_whb_mux[0] &&~ws_res_from_mem_sign) ? {{24{1'b0}}, ws_final_result[31:24]} :
-                   ws_final_result;
+assign rf_wdata = ws_final_result;
 assign es_forward_ws = ws_final_result;/////是否改成rf_wdata？
 
 // debug info generate
@@ -90,7 +78,7 @@ assign debug_wb_pc       = ws_pc;
 assign debug_wb_rf_wen   = {4{rf_we}};
 assign debug_wb_rf_wnum  = ws_dest;
 //////1
-assign debug_wb_rf_wdata = rf_wdata;
+assign debug_wb_rf_wdata = ws_final_result;
 //////0
 
 endmodule

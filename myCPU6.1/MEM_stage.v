@@ -54,10 +54,10 @@ wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
 assign ms_to_ws_bus = {//////1
-                       ms_res_from_mem_h,  //74:74
-                       ms_res_from_mem_b,  //73:73
-                       ms_res_from_mem_sign,//72:72
-                       ms_whb_mux,//71:70
+                    //    ms_res_from_mem_h,  //74:74
+                    //    ms_res_from_mem_b,  //73:73
+                    //    ms_res_from_mem_sign,//72:72
+                    //    ms_whb_mux,//71:70
                        //////0
                        ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
@@ -81,7 +81,19 @@ always @(posedge clk) begin
     end
 end
 
-assign mem_result = data_sram_rdata;
+assign mem_result = (ms_res_from_mem_h && ~ms_whb_mux[1] && ms_res_from_mem_sign) ? {{16{data_sram_rdata[15]}}, data_sram_rdata[15:0]} :
+                  (ms_res_from_mem_h && ~ms_whb_mux[1] &&~ms_res_from_mem_sign) ? {{16{1'b0}}, data_sram_rdata[15:0]} :
+                  (ms_res_from_mem_h &&  ms_whb_mux[1] && ms_res_from_mem_sign) ? {{16{data_sram_rdata[31]}}, data_sram_rdata[31:16]} :
+                  (ms_res_from_mem_h &&  ms_whb_mux[1] &&~ms_res_from_mem_sign) ? {{16{1'b0}}, data_sram_rdata[31:16]} :
+                  (ms_res_from_mem_b && ~ms_whb_mux[1] && ~ms_whb_mux[0] && ms_res_from_mem_sign) ? {{24{data_sram_rdata[7]}}, data_sram_rdata[7:0]} :
+                  (ms_res_from_mem_b && ~ms_whb_mux[1] && ~ms_whb_mux[0] &&~ms_res_from_mem_sign) ? {{24{1'b0}}, data_sram_rdata[7:0]} :
+                  (ms_res_from_mem_b && ~ms_whb_mux[1] &&  ms_whb_mux[0] && ms_res_from_mem_sign) ? {{24{data_sram_rdata[15]}}, data_sram_rdata[15:8]} :
+                  (ms_res_from_mem_b && ~ms_whb_mux[1] &&  ms_whb_mux[0] &&~ms_res_from_mem_sign) ? {{24{1'b0}}, data_sram_rdata[15:8]} :
+                  (ms_res_from_mem_b &&  ms_whb_mux[1] && ~ms_whb_mux[0] && ms_res_from_mem_sign) ? {{24{data_sram_rdata[23]}}, data_sram_rdata[23:16]} :
+                  (ms_res_from_mem_b &&  ms_whb_mux[1] && ~ms_whb_mux[0] &&~ms_res_from_mem_sign) ? {{24{1'b0}}, data_sram_rdata[23:16]} :
+                  (ms_res_from_mem_b &&  ms_whb_mux[1] &&  ms_whb_mux[0] && ms_res_from_mem_sign) ? {{24{data_sram_rdata[31]}}, data_sram_rdata[31:24]} :
+                  (ms_res_from_mem_b &&  ms_whb_mux[1] &&  ms_whb_mux[0] &&~ms_res_from_mem_sign) ? {{24{1'b0}}, data_sram_rdata[31:24]} :
+                   data_sram_rdata;
 
 assign ms_final_result = (ms_res_from_mem_w | ms_res_from_mem_h | ms_res_from_mem_b) ? mem_result
                                          : ms_alu_result;
