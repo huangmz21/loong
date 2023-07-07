@@ -42,9 +42,10 @@ assign if_ex = (fs_pc[1:0]==2'b00) ? 0 : 1;
 /*wire [4:0] if_excode;
 assign if_excode = 0x04; in ID_stage we determine the excode value using if_ex signal*/
 
-assign fs_to_ds_bus = {if_ex,
-                       fs_inst ,
-                       fs_pc   };
+assign fs_to_ds_bus = {if_ex,     //64:64
+                       fs_inst ,  //63:32
+                       fs_pc      //31:0   
+                       };
 /*******************************/
 
 // pre-IF stage

@@ -86,7 +86,8 @@ wire [31:0] es_rs_value   ;
 wire [31:0] es_rt_value   ;
 wire [31:0] es_pc         ;
 wire        ex_from_id    ;
-wire        excode_from_id;
+
+wire [ 4:0] excode_from_id;
 wire        signed_from_id;
 
 wire [ 4:0] es_cp0_addr   ;
@@ -119,13 +120,13 @@ assign {es_f_ctrl1,   //3:2
 assign {
 
         //For exception
-        mtc0_we_from_id,
-        es_cp0_addr    ,
-        signed_from_id ,
-        ex_from_id     ,
-        excode_from_id ,
+        mtc0_we_from_id,  //168:168
+        es_cp0_addr    ,  //167:163
+        signed_from_id ,  //162:162
+        ex_from_id     ,  //161:161
+        excode_from_id ,  //160:156
         //end
-        /// 非对齐访�?
+        /// �Ƕ���ô�
                        
         es_res_from_mem_lwl,   //155:155
         es_res_from_mem_lwr,   //154:154
@@ -202,6 +203,7 @@ assign es_rt_value = es_f_ctrl2==2'b01    ? es_forward_ms:
                      es_f_ctrl2==2'b10    ? es_forward_ws :
                                       es_rt_value_t;
 
+//?????????????????????????????????????
 assign {ex_from_cur_ms
        } = ms_to_es_bus;
 
@@ -251,11 +253,11 @@ end
 //输出的时候和valid 做与运算
 assign es_to_ms_bus = {
                        // For exception
-                       mtc0_we_es     ,
-                       es_cp0_addr    ,
-                       es_ex          ,
-                       es_excode      ,
-                       es_res_from_cp0,
+                       mtc0_we_es     ,   //122:122
+                       es_cp0_addr    ,   //121:117
+                       es_ex          ,   //116:116
+                       es_excode      ,   //115:111
+                       es_res_from_cp0,   //110:110
                        //END
 
                        es_res_from_mem_lwl,   //109:109
