@@ -40,7 +40,8 @@ assign fs_pc = fs_to_ds_bus[31:0];
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 /*********************************/
-wire       ex_from_if;
+//Here we only need one-bit-wide excode, as only one type can happen during IF stage
+wire     ex_from_if;
 assign {ex_from_if,
         ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
@@ -238,11 +239,14 @@ assign signed_op = ~func[0];
 
 assign ds_to_es_bus = {
                        //For exception
-                       inst_mtc0   ,  // we of mtc0 passing to WB_stage
-                       cp0_addr    ,  // address of the coprocessor0 register that the instruction wants to read or write
-                       signed_op   ,  // Whether the operator is signed
-                       ds_ex       ,
-                       ds_excode   ,
+                       // we of mtc0 passing to WB_stage
+                       inst_mtc0   ,  //168:168
+                       // address of the coprocessor0 register that the instruction wants to read or write
+                       cp0_addr    ,  //167:163
+                       // Whether the operator is signed
+                       signed_op   ,  //162:162
+                       ds_ex       ,  //161:161
+                       ds_excode   ,  //160:156
 
                        /// 非对齐访�?
                        
