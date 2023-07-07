@@ -24,8 +24,9 @@ module id_stage(
     //stall
     input [1:0]stallD, 
     output [10                -1:0] ds_to_es_addr,
-    output ifbranch
+    output                          ifbranch,
 
+    input                           ex_from_ws        //Need to flush
 
 );
 
@@ -38,7 +39,10 @@ assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
-assign {ds_inst,
+/*********************************/
+wire       ex_from_if;
+assign {ex_from_if,
+        ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
 
 wire        rf_we   ;
@@ -63,12 +67,24 @@ wire        res_from_lo;
 wire        rs_gt_0;
 wire        rs_eq_0;
 wire        rs_lt_0;
+
+//for cp0
+wire        res_from_cp0;
+wire [ 4:0] cp0_addr;       // address of the coprocessor0 register that the instruction wants to read or write
+assign cp0_addr = (rd_d[5'h08] & (sel==3'b000)) ? `CR_BADVADDR : 
+                  (rd_d[5'h09] & (sel==3'b000)) ? `CR_COUNT    : 
+                  (rd_d[5'h0b] & (sel==3'b000)) ? `CR_COMPARE  : 
+                  (rd_d[5'h0c] & (sel==3'b000)) ? `CR_STATUS   : 
+                  (rd_d[5'h0d] & (sel==3'b000)) ? `CR_CAUSE    : 
+                  (rd_d[5'h0e] & (sel==3'b000)) ? `CR_EPC      : 5'h00 ;  // ! to be continued(other cp0 registers)
+/**************************/
+
 //////0
 
 //wire        load_op;
 wire        src1_is_sa;
 wire        src1_is_pc;
-//////1信号名更改
+//////1信号名更�?
 wire        src2_is_simm;
 wire        src2_is_usimm;
 wire        src2_is_8;
@@ -109,6 +125,7 @@ wire [ 4:0] rt;
 wire [ 4:0] rd;
 wire [ 4:0] sa;
 wire [ 5:0] func;
+wire [ 2:0] sel;
 wire [25:0] jidx;
 wire [63:0] op_d;
 wire [31:0] rs_d;
@@ -116,6 +133,7 @@ wire [31:0] rt_d;
 wire [31:0] rd_d;
 wire [31:0] sa_d;
 wire [63:0] func_d;
+
 
 wire        inst_addu;
 wire        inst_subu;
@@ -136,6 +154,8 @@ wire        inst_beq;
 wire        inst_bne;
 wire        inst_jal;
 wire        inst_jr;
+wire        inst_mfc0;
+wire        inst_mtc0;
 
 //////1
 wire        inst_add;
@@ -184,9 +204,47 @@ wire [31:0] rf_rdata2;
 wire        rs_eq_rt;
 
 assign br_bus       = {br_taken,br_target};
+/*********************************************/
+wire       signed_op;
+reg        ds_ex;
+reg [ 4:0] ds_excode;
+wire       inst_undef;  // indicate whether the instruction is undefined or not
+                        // !!!!!!!!!!!!!!!!!!!!!! absence of its logic part
+always @(*) begin
+    if (ex_from_if) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h04;
+    end
+    else if (inst_break) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h09;
+    end
+    else if (inst_syscall) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h08;
+    end
+    else if (inst_undef) begin
+        ds_ex     <= 1'b1;
+        ds_excode <= 5'h0a;
+    end
+    else begin
+        ds_ex     <= 1'b0;
+        ds_excode <= 5'hxx; // ! do need to be undetermined? 
+    end
+end
+
+assign signed_op = ~func[0];
+
 
 assign ds_to_es_bus = {
-                       /// 非对齐访存
+                       //For exception
+                       inst_mtc0   ,  // we of mtc0 passing to WB_stage
+                       cp0_addr    ,  // address of the coprocessor0 register that the instruction wants to read or write
+                       signed_op   ,  // Whether the operator is signed
+                       ds_ex       ,
+                       ds_excode   ,
+
+                       /// 非对齐访�?
                        
                        res_from_mem_lwl,   //155:155
                        res_from_mem_lwr,   //154:154
@@ -233,7 +291,7 @@ assign ds_to_es_valid = (stallD==2'b01)?1'b0:
                         (stallD==2'b10)?1'b0:(ds_valid && ds_ready_go);
 //这里是flush操作
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || ex_from_ws) begin
         ds_valid <= 1'b0;
     end
    else if (ds_allowin) begin
@@ -253,6 +311,7 @@ assign sa   = ds_inst[10: 6];
 assign func = ds_inst[ 5: 0];
 assign imm  = ds_inst[15: 0];
 assign jidx = ds_inst[25: 0];
+assign sel  = ds_inst[ 2: 0];
 
 decoder_6_64 u_dec0(.in(op  ), .out(op_d  ));
 decoder_6_64 u_dec1(.in(func), .out(func_d));
@@ -273,17 +332,17 @@ assign inst_xori   = op_d[6'h0e];
 assign inst_sllv   = op_d[6'h00] & func_d[6'h04] & sa_d[5'h00];
 assign inst_srav   = op_d[6'h00] & func_d[6'h07] & sa_d[5'h00];
 assign inst_srlv   = op_d[6'h00] & func_d[6'h06] & sa_d[5'h00];
-//第五章数据搬运
+//第五章数据搬�?
 assign inst_mfhi   = op_d[6'h00] & func_d[6'h10] & sa_d[5'h00] & rs_d[5'h00] & rt_d[5'h00];
 assign inst_mflo   = op_d[6'h00] & func_d[6'h12] & sa_d[5'h00] & rs_d[5'h00] & rt_d[5'h00];
 assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & sa_d[5'h00] & rt_d[5'h00] & rd_d[5'h00];
 assign inst_mtlo   = op_d[6'h00] & func_d[6'h13] & sa_d[5'h00] & rt_d[5'h00] & rd_d[5'h00];
-//第五章乘除
+//第五章乘�?
 assign inst_mult   = op_d[6'h00] & func_d[6'h18] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_multu  = op_d[6'h00] & func_d[6'h19] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_div    = op_d[6'h00] & func_d[6'h1a] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_divu   = op_d[6'h00] & func_d[6'h1b] & sa_d[5'h00] & rd_d[5'h00];
-//第六章转移
+//第六章转�?
 assign inst_bgez   = op_d[6'h01] & rt_d[5'h01];
 assign inst_bgtz   = op_d[6'h07] & rt_d[5'h00];
 assign inst_blez   = op_d[6'h06] & rt_d[5'h00];
@@ -292,7 +351,7 @@ assign inst_j      = op_d[6'h02];
 assign inst_bltzal = op_d[6'h01] & rt_d[5'h10];
 assign inst_bgezal = op_d[6'h01] & rt_d[5'h11];
 assign inst_jalr   = op_d[6'h00] & rt_d[5'h00] & sa_d[5'h00] & func_d[6'h09];
-//第六章访存
+//第六章访�?
 assign inst_lb    = op_d[6'h20];
 assign inst_lbu   = op_d[6'h24];
 assign inst_lh    = op_d[6'h21];
@@ -326,6 +385,13 @@ assign inst_bne    = op_d[6'h05];
 assign inst_jal    = op_d[6'h03];
 assign inst_jr     = op_d[6'h00] & func_d[6'h08] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
 
+//About exception
+assign inst_syscall = op_d[6'h00] & func_d[6'h0c];
+assign inst_break   = op_d[6'h00] & func_d[6'h0d];
+assign inst_mfc0    = op_d[6'h10] & rs_d[5'h00] & sa_d[5'h00] & (func_d[6'h00] | func_d[6'h01] | func_d[6'h02] | func_d[6'h03] | func_d[6'h04] | func_d[6'h05] | func_d[6'h06] | func_d[6'h07]);
+assign inst_mtc0    = op_d[6'h10] & rs_d[5'h04] & sa_d[5'h00] & (func_d[6'h00] | func_d[6'h01] | func_d[6'h02] | func_d[6'h03] | func_d[6'h04] | func_d[6'h05] | func_d[6'h06] | func_d[6'h07]);
+assign res_from_cp0 = inst_mfc0;
+//End
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal | inst_add | inst_addi
                    | inst_jalr | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_sb | inst_sh | inst_bgezal | inst_bltzal
                    | inst_lwl |inst_lwr |inst_swl |inst_swr;

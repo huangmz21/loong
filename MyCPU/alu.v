@@ -5,18 +5,18 @@ module alu(
   output [31:0] alu_result
 );
 
-wire op_add;   //ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½
-wire op_sub;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-wire op_slt;   //ï¿½Ð·ï¿½ï¿½Å±È½Ï£ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Î»
-wire op_sltu;  //ï¿½Þ·ï¿½ï¿½Å±È½Ï£ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Î»
-wire op_and;   //ï¿½ï¿½Î»ï¿½ï¿½
-wire op_nor;   //ï¿½ï¿½Î»ï¿½ï¿½ï¿½
-wire op_or;    //ï¿½ï¿½Î»ï¿½ï¿½
-wire op_xor;   //ï¿½ï¿½Î»ï¿½ï¿½ï¿½
-wire op_sll;   //ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½
-wire op_srl;   //ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½
-wire op_sra;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-wire op_lui;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¸ß°ë²¿ï¿½ï¿½
+wire op_add;   //¼Ó·¨²Ù×÷
+wire op_sub;   //¼õ·¨²Ù×÷
+wire op_slt;   //ÓÐ·ûºÅ±È½Ï£¬Ð¡ÓÚÖÃÎ»
+wire op_sltu;  //ÎÞ·ûºÅ±È½Ï£¬Ð¡ÓÚÖÃÎ»
+wire op_and;   //°´Î»Óë
+wire op_nor;   //°´Î»»ò·Ç
+wire op_or;    //°´Î»»ò
+wire op_xor;   //°´Î»Òì»ò
+wire op_sll;   //Âß¼­×óÒÆ
+wire op_srl;   //Âß¼­ÓÒÒÆ
+wire op_sra;   //ËãÊõÓÒÒÆ
+wire op_lui;   //Á¢¼´ÊýÖÃÓÚ¸ß°ë²¿·Ö
 
 // control code decomposition
 assign op_add  = alu_op[ 0];
@@ -45,17 +45,27 @@ wire [63:0] sr64_result;
 wire [31:0] sr_result; 
 
 
-// 32-bit adder
-wire [31:0] adder_a;
-wire [31:0] adder_b;
+//////1 32-bit adderé­”æ”¹
+wire [30:0] adder_a_2;
+wire        adder_a_1;
+wire [30:0] adder_b_2;
+wire        adder_b_1;
 wire        adder_cin;
 wire [31:0] adder_result;
+wire        adder_result_t;
+wire        adder_result_1;
+wire [30:0] adder_result_2;
 wire        adder_cout;
+wire        overflow;
 
-assign adder_a   = alu_src1;
-assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
+assign {adder_a_1, adder_a_2}           = alu_src1;
+assign {adder_b_1, adder_b_2}           = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
+assign adder_cin                        = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign {adder_result_t, adder_result_2} = adder_a_2 + adder_b_2 + adder_cin;
+assign {adder_cout, adder_result_1}     = adder_a_1+adder_b_1+adder_result_t;
+assign overflow                         = adder_cout^adder_result_t;
+assign adder_result                     = {adder_result_1, adder_result_2};
+//////0
 
 // ADD, SUB result
 assign add_sub_result = adder_result;
@@ -71,7 +81,7 @@ assign sltu_result[0]    = ~adder_cout;
 
 // bitwise operation
 assign and_result = alu_src1 & alu_src2;
-assign or_result  = alu_src1 | alu_src2 ;
+assign or_result  = alu_src1 | alu_src2;
 assign nor_result = ~or_result;
 assign xor_result = alu_src1 ^ alu_src2;
 assign lui_result = {alu_src2[15:0], 16'b0};
