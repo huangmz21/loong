@@ -1,4 +1,4 @@
-`include "mycpu.h"
+`include "mycpu.h"  //bug4
 module mycpu_top(
     input         clk,
     input         resetn,
@@ -38,7 +38,29 @@ wire [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus;
 wire [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
 wire [`BR_BUS_WD       -1:0] br_bus;
 
-wire                         ex_from_ws  ;
+//exception signal
+wire            ex_from_ws  ;
+//forward unit
+wire [32-1:0] ds_forward_bus;
+wire [2-1:0] ds_forward_ctrl;
+wire ifbranch;
+wire [10-1:0] ds_to_es_addr;
+wire es_valid;
+wire [10-1:0] es_to_ms_addr;
+wire [32-1:0] es_forward_ms;
+wire [32-1:0] es_forward_ws;
+wire es_mem_we;
+wire [2*2-1:0] es_forward_ctrl;
+wire [32-1:0] mem_result;
+wire ms_res_from_mem;
+
+//stall
+//wire [1:0] stallF;
+//////1exestop
+wire div_stop;
+//////0
+wire [1:0] stallD;
+wire [1:0] stallE;
 
 // IF stage
 if_stage if_stage(
@@ -79,6 +101,14 @@ id_stage id_stage(
     .ws_to_rf_bus   (ws_to_rf_bus   ),
 
     .ex_from_ws(ex_from_ws)
+    //forward datapath
+    .ds_forward_bus (ds_forward_bus),
+    //forward control
+    .ds_forward_ctrl(ds_forward_ctrl),
+    //stall
+    .stallD (stallD),
+    .ds_to_es_addr(ds_to_es_addr),
+    .ifbranch(ifbranch)
 );
 // EXE stage
 exe_stage exe_stage(
@@ -100,6 +130,21 @@ exe_stage exe_stage(
     .data_sram_wdata(data_sram_wdata),
 
     .ex_from_ws(ex_from_ws)
+    //forward datapath
+    .es_forward_ms  (es_forward_ms  ),
+    .es_forward_ws  (es_forward_ws  ),
+    //.mem_result(ms_to_ws_bus[63:32]),
+    //forward control
+    .es_forward_ctrl(es_forward_ctrl),
+    .es_mem_we_tohazard(es_mem_we),
+    .es_valid_tohazard(es_valid),
+    // stall control
+    .stallE(stallE),
+    .ds_to_es_addr(ds_to_es_addr),
+    .es_to_ms_addr(es_to_ms_addr),
+    .es_stop(div_stop)
+
+
 );
 // MEM stage
 mem_stage mem_stage(
@@ -118,6 +163,13 @@ mem_stage mem_stage(
     .data_sram_rdata(data_sram_rdata),
 
     .ex_from_ws(ex_from_ws)
+    //forward 
+    .ms_res_from_mem(ms_res_from_mem),
+    .ds_forward_bus(ds_forward_bus),
+    .es_forward_ms(es_forward_ms)
+    //.es_to_ms_addr(es_to_ms_addr),
+    //.ms_to_ws_addr(ms_to_ws_addr)
+    
 );
 // WB stage
 wb_stage wb_stage(
@@ -130,6 +182,8 @@ wb_stage wb_stage(
     .ms_to_ws_bus   (ms_to_ws_bus   ),
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
+    //forward
+    .es_forward_ws  (es_forward_ws  ),
     //trace debug interface
     .debug_wb_pc      (debug_wb_pc      ),
     .debug_wb_rf_wen  (debug_wb_rf_wen  ),
@@ -137,6 +191,43 @@ wb_stage wb_stage(
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
 
     .ws_ex(ex_from_ws)
+);
+
+
+hazard hazard (
+       //decode_stage beq
+    .ifbranch(ifbranch),            //是否跳转
+    .rf_raddr1(ds_to_es_addr[9:5]),       //使用的源寄存器号,IF阶段
+    .rf_raddr2(ds_to_es_addr[4:0]), 
+    .ds_forward_ctrl(ds_forward_ctrl),
+    .mem_we(ds_to_es_bus[117]),
+
+
+    //ex_stage alu
+    .es_valid(es_valid),
+    .es_rf_raddr1(es_to_ms_addr[9:5]),
+    .es_rf_raddr2(es_to_ms_addr[4:0]),
+    .es_dest(es_to_ms_bus[68:64]),
+    .es_res_from_mem(es_to_ms_bus[70]),
+    .es_gr_we(es_to_ms_bus[69]),
+    .es_forward_ctrl(es_forward_ctrl),
+    .es_mem_we(es_mem_we),
+
+    //mem_stage 
+    .ms_dest(ms_to_ws_bus[68:64]),
+    .ms_res_from_mem(ms_res_from_mem),
+    .ms_gr_we(ms_to_ws_bus[69]),
+
+    //wb_stage
+    .ws_dest(ws_to_rf_bus[36:32]),
+    .ws_gr_we(ws_to_rf_bus[37]),
+
+    //stall and flush
+    //00=normal�?01=stall�?10=flush
+    .stallD(stallD),
+    //.stallF(stallF),
+    .stallE(stallE),
+    .div_stop(div_stop)
 );
 
 endmodule

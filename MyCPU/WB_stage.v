@@ -20,6 +20,8 @@ module wb_stage(
     output [`WB_TO_CP0_REGISTER_BUS_WD -1:0] wb_to_cp0_register_bus,
     /**********************/
 
+    //forwardpath
+    output [32-1:0]                 es_forward_ws,
     //trace debug interface
     output [31:0] debug_wb_pc     ,
     output [ 3:0] debug_wb_rf_wen ,
@@ -29,10 +31,16 @@ module wb_stage(
     output        ws_ex  //Used as a signal of flushing the pipeline
 );
 
-reg         ws_valid;
+ (* keep = "true" *) reg         ws_valid;
 wire        ws_ready_go;
 
-reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
+ (* keep = "true" *) reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
+ //////1
+// wire        ws_res_from_mem_h;
+// wire        ws_res_from_mem_b;
+// wire        ws_res_from_mem_sign;
+// wire [1:0]  ws_whb_mux;
+//////0
 wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
@@ -41,7 +49,6 @@ wire        ws_res_from_cp0;
 wire [ 4:0] ws_cp0_addr;
 wire [ 4:0] ws_excode;
 wire        ws_ex;
-wire        ws_rt_value;
 wire        excode_from_ms;
 assign {mtc0_we_from_ms,
         ws_cp0_addr    ,
@@ -52,7 +59,6 @@ assign {mtc0_we_from_ms,
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
-        ws_rt_value    ,  
         ws_pc             //31:0
        } = ms_to_ws_bus_r;
 
@@ -96,7 +102,7 @@ end
 
 /************************************/
 
-// to be continued
+// to be continued???
 assign cp0_addr = ws_cp0_addr;
 
 
@@ -106,11 +112,13 @@ assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
 /********************************/
+assign es_forward_ws = ws_final_result;/////是否改成rf_wdata�?
 
 // debug info generate
 assign debug_wb_pc       = ws_pc;
 assign debug_wb_rf_wen   = {4{rf_we}};
 assign debug_wb_rf_wnum  = ws_dest;
+//----------------0
 assign debug_wb_rf_wdata = ws_final_result;
 
 endmodule

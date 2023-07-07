@@ -17,10 +17,12 @@ module if_stage(
     output [31:0] inst_sram_addr ,
     output [31:0] inst_sram_wdata,
     input  [31:0] inst_sram_rdata,
-    input         ex_from_ws        //Need to flush
+    //stall
+    input [1:0] stallF,
+    input       ex_from_ws        //Need to flush
 );
 
-reg         fs_valid;
+ (* keep = "true" *) reg         fs_valid;
 wire        fs_ready_go;
 wire        fs_allowin;
 wire        to_fs_valid;
@@ -33,7 +35,7 @@ wire [ 31:0] br_target;
 assign {br_taken,br_target} = br_bus;
 
 wire [31:0] fs_inst;
-reg  [31:0] fs_pc;
+ (* keep = "true" *) reg  [31:0] fs_pc;
 /*******************************/
 wire if_ex;
 assign if_ex = (fs_pc[1:0]==2'b00) ? 0 : 1;

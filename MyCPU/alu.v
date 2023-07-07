@@ -45,17 +45,27 @@ wire [63:0] sr64_result;
 wire [31:0] sr_result; 
 
 
-// 32-bit adder
-wire [31:0] adder_a;
-wire [31:0] adder_b;
+//////1 32-bit adder魔改
+wire [30:0] adder_a_2;
+wire        adder_a_1;
+wire [30:0] adder_b_2;
+wire        adder_b_1;
 wire        adder_cin;
 wire [31:0] adder_result;
+wire        adder_result_t;
+wire        adder_result_1;
+wire [30:0] adder_result_2;
 wire        adder_cout;
+wire        overflow;
 
-assign adder_a   = alu_src1;
-assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
+assign {adder_a_1, adder_a_2}           = alu_src1;
+assign {adder_b_1, adder_b_2}           = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
+assign adder_cin                        = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign {adder_result_t, adder_result_2} = adder_a_2 + adder_b_2 + adder_cin;
+assign {adder_cout, adder_result_1}     = adder_a_1+adder_b_1+adder_result_t;
+assign overflow                         = adder_cout^adder_result_t;
+assign adder_result                     = {adder_result_1, adder_result_2};
+//////0
 
 // ADD, SUB result
 assign add_sub_result = adder_result;
