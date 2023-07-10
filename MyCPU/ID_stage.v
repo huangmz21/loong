@@ -245,7 +245,7 @@ end
 assign signed_op = ~func[0];
 
 
-assign ds_to_es_bus = {
+assign ds_to_es_bus = {res_from_cp0,  //171:171
                        //For exception
                        inst_eret   ,    //170:170
                        bd_from_if  ,  //169:169

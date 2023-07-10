@@ -122,7 +122,7 @@ always @(posedge clk)begin
     else if (eret_flush)
         c0_status_exl <= 1'b0;
     else if (mtc0_we && c0_waddr==`CR_STATUS)
-        c0_status_im <= c0_wdata[1];
+        c0_status_exl <= c0_wdata[1];
 end
 
 // c0_status_ie

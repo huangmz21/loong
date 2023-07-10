@@ -47,15 +47,18 @@ wire        ws_res_from_cp0;
 wire [ 4:0] ws_cp0_addr;
 wire [ 4:0] ws_excode;
 wire        ws_ex;
-wire        excode_from_ms;
-assign {inst_eret,
+wire [ 4:0] excode_from_ms;
+wire [31:0] ws_rt_value;
+assign {ws_rt_value,
+        inst_eret,
         bd_from_if,
         mtc0_we_from_ms,
         ws_cp0_addr    ,
         ws_res_from_cp0,  // mfc0: load the value of CP0[rd,sel] to R[rt]
+        badvaddr_from_ms, //wrong virtual address passed to WB_stage
         ex_from_ms     ,
         excode_from_ms ,
-        badvaddr_from_ms, //wrong virtual address passed to WB_stage
+        
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
@@ -80,6 +83,7 @@ assign      ws_bd = bd_from_if;
 
 wire        eret_flush; 
 assign      eret_flush = inst_eret;
+wire [31:0] badvaddr_from_ms;
 assign wb_to_cp0_register_bus = {ws_ex,             //110:110
                                  ws_excode,         //109:104
                                  badvaddr_from_ms,  //103:72

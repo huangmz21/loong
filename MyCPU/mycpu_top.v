@@ -109,7 +109,7 @@ id_stage id_stage(
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws),
     //forward datapath
     .ds_forward_bus (ds_forward_bus),
     //forward control
@@ -172,7 +172,7 @@ mem_stage mem_stage(
     //from data-sram
     .data_sram_rdata(data_sram_rdata),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws),
     //forward 
     .ms_res_from_mem(ms_res_from_mem),
     .ds_forward_bus(ds_forward_bus),
@@ -258,6 +258,6 @@ cp0 cp0(
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
     .rdata(cp0_rdata),
     .epc(cp0_epc)
-)
+);
 
 endmodule

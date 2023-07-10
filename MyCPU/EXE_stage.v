@@ -89,6 +89,7 @@ wire        signed_from_id;
 wire [ 4:0] es_cp0_addr   ;
 wire        mtc0_we_from_id;
 wire        mtc0_we_es    ;
+wire        es_cp0_op     ;
 
 assign mtc0_we_es = mtc0_we_from_id;
 
@@ -113,7 +114,7 @@ assign {es_f_ctrl1,   //3:2
         es_f_ctrl2   //1:0
         } = es_forward_ctrl;
 
-assign {
+assign {es_cp0_op,        //171:171
         inst_eret ,       //170:170
         bd_from_if,       //169:169
         //For exception

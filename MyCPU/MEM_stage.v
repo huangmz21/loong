@@ -32,7 +32,7 @@ wire        ms_ready_go;
  (* keep = "true" *) reg [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus_r;
 
 wire        ex_from_es;
-wire        excode_from_es;
+wire [4:0]  excode_from_es;
 wire        ms_res_from_cp0;
 
 //////1
@@ -83,7 +83,8 @@ assign ex_to_es = ms_ex;
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
-assign ms_to_ws_bus = {inst_eret ,       //116:116
+assign ms_to_ws_bus = {ms_rt_value,      //148:117
+                       inst_eret ,       //116:116
                        bd_from_if,       //115:115
                        mtc0_we_ms    ,   //114:114
                        ms_cp0_addr    ,  //113:109
@@ -91,6 +92,7 @@ assign ms_to_ws_bus = {inst_eret ,       //116:116
                        ms_alu_result  ,  //107:76
                        ms_ex,            //75:75
                        ms_excode,        //74:70
+
                        //////0
                        ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
