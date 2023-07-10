@@ -52,7 +52,7 @@ assign cp0_register = {c0_badvaddr,    //121:90
                         };
 
 wire [31:0] addr_d;
-decoder_5_32 u_dec2(.in(addr  ), .out(addr_d  ));
+decoder_5_32 u_dec2(.in(c0_waddr ), .out(addr_d  ));
 
 assign rdata = addr_d[`CR_BADVADDR] ? c0_badvaddr :
                addr_d[`CR_COUNT]    ? c0_count    :

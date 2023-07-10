@@ -197,6 +197,10 @@ wire        inst_sh;
 wire        inst_eret;
 
 assign      inst_eret = (ds_inst==32'h4200_0018);
+
+
+wire        inst_nop;
+assign      inst_nop = (ds_inst==32'h0);
 //////0
 
 wire        dst_is_r31;  
@@ -449,10 +453,12 @@ assign res_from_mem_sign = (inst_lh | inst_lb) && ds_valid;
 assign res_from_mem_lwl = (inst_lwl) && ds_valid;
 assign res_from_mem_lwr = (inst_lwr) && ds_valid;
 assign dst_is_r31     = inst_jal | inst_bgezal | inst_bltzal;
+//Destination is rt
 assign dst_is_rt      = inst_addiu | inst_lui | inst_lw | inst_addi | inst_slti | inst_sltiu | inst_andi | inst_ori | inst_xori 
-                       | inst_lb | inst_lbu | inst_lh | inst_lhu |inst_lwl | inst_lwr ;
+                       | inst_lb | inst_lbu | inst_lh | inst_lhu |inst_lwl | inst_lwr | inst_mfc0;
 assign gr_we        = (~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr & ~ds_hl_we[1] & ~ds_hl_we[0] & ~inst_bgez & ~inst_bgtz & ~inst_blez
-                     & ~inst_bltz & ~inst_j & ~inst_sb & ~inst_sh & ~inst_swl & ~inst_swr)&& ds_valid;
+                     & ~inst_bltz & ~inst_j & ~inst_sb & ~inst_sh & ~inst_swl & ~inst_swr & ~inst_mtc0 & ~inst_syscall
+                     & ~inst_eret & ~inst_nop )&& ds_valid;
 assign mem_we_w       = inst_sw && ds_valid;
 assign mem_we_h       = inst_sh && ds_valid;
 assign mem_we_b       = inst_sb && ds_valid;
