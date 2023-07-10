@@ -9,7 +9,8 @@ module cp0(
     input  [`WB_TO_CP0_REGISTER_BUS_WD -1:0] wb_to_cp0_register_bus,
 
     // from cp0_register to WB_stage, used in MTF0(read)
-    output [31:0] rdata
+    output [31:0] rdata,
+    output [31:0] epc
 
 );
 
@@ -35,17 +36,18 @@ assign {wb_ex,
         eret_flush
        } = wb_to_cp0_register_bus;
 
-assign cp0_register = {c0_badvaddr,
-                       c0_count,
-                       c0_compare,
-                       c0_status_bev,
-                       c0_status_im,
-                       c0_status_exl, // remember that wherever cpu needs to check its priority state, it will check this signal
-                       c0_status_ie,
-                       c0_cause_bd,
-                       c0_cause_ti,
-                       c0_cause_ip,
-                       c0_cause_excode
+wire [`CP0_REGISTER_BUS_WD-1:0] cp0_register;
+assign cp0_register = {c0_badvaddr,    //121:90
+                       c0_count,       //89:58
+                       c0_compare,     //57:26
+                       c0_status_bev,  //26:26
+                       c0_status_im,   //25:18
+                       c0_status_exl, //17:17 remember that wherever cpu needs to check its priority state, it will check this signal
+                       c0_status_ie,   //16:16
+                       c0_cause_bd,    //15:15
+                       c0_cause_ti,    //14:14
+                       c0_cause_ip,    //13:6
+                       c0_cause_excode //5:0
 
                         };
 
@@ -78,6 +80,7 @@ reg [ 7:0] c0_cause_ip;
 reg [ 4:0] c0_cause_excode;
 
 reg [31:0] c0_epc;
+assign epc = c0_epc;
 
 // c0_badvaddr
 always @(posedge clk)begin
@@ -119,7 +122,7 @@ always @(posedge clk)begin
     else if (eret_flush)
         c0_status_exl <= 1'b0;
     else if (mtc0_we && c0_waddr==`CR_STATUS)
-        c0_status_im <= c0_wdata[1];
+        c0_status_exl <= c0_wdata[1];
 end
 
 // c0_status_ie

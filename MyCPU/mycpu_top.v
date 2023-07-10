@@ -62,6 +62,12 @@ wire div_stop;
 wire [1:0] stallD;
 wire [1:0] stallE;
 
+/////For Exception
+wire ex_from_ms_to_es;
+
+wire eret_from_ws;
+wire cp0_epc;
+
 // IF stage
 if_stage if_stage(
     .clk            (clk            ),
@@ -80,7 +86,10 @@ if_stage if_stage(
     .inst_sram_wdata(inst_sram_wdata),
     .inst_sram_rdata(inst_sram_rdata),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws),
+    .bd_from_ds(ifbranch),
+    .eret_from_ws(eret_from_ws),
+    .cp0_epc(cp0_epc)
 );
 // ID stage
 id_stage id_stage(
@@ -100,7 +109,7 @@ id_stage id_stage(
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws),
     //forward datapath
     .ds_forward_bus (ds_forward_bus),
     //forward control
@@ -129,7 +138,8 @@ exe_stage exe_stage(
     .data_sram_addr (data_sram_addr ),
     .data_sram_wdata(data_sram_wdata),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws)          ,
+    .ex_from_ms(ex_from_ms_to_es)    ,
     //forward datapath
     .es_forward_ms  (es_forward_ms  ),
     .es_forward_ws  (es_forward_ws  ),
@@ -162,15 +172,19 @@ mem_stage mem_stage(
     //from data-sram
     .data_sram_rdata(data_sram_rdata),
 
-    .ex_from_ws(ex_from_ws)
+    .ex_from_ws(ex_from_ws),
     //forward 
     .ms_res_from_mem(ms_res_from_mem),
     .ds_forward_bus(ds_forward_bus),
-    .es_forward_ms(es_forward_ms)
+    .es_forward_ms(es_forward_ms)   ,
     //.es_to_ms_addr(es_to_ms_addr),
     //.ms_to_ws_addr(ms_to_ws_addr)
-    
+    .ex_to_es(ex_from_ms_to_es)
 );
+
+wire [31:0] cp0_rdata;
+wire [`WB_TO_CP0_REGISTER_BUS_WD -1:0] wb_to_cp0_register_bus;
+
 // WB stage
 wb_stage wb_stage(
     .clk            (clk            ),
@@ -190,7 +204,11 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
 
-    .ws_ex(ex_from_ws)
+    .ws_ex(ex_from_ws)                   ,
+
+    .cp0_rdata(cp0_rdata)                ,
+    .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
+    .ws_eret(eret_from_ws)
 );
 
 
@@ -228,6 +246,18 @@ hazard hazard (
     //.stallF(stallF),
     .stallE(stallE),
     .div_stop(div_stop)
+);
+//-------------------------------temporary
+wire [5:0] ext_int_in;
+assign ext_int_in = 6'b0;
+
+cp0 cp0(
+    .clk(clk),
+    .reset(reset),
+    .ext_int_in(ext_int_in),
+    .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
+    .rdata(cp0_rdata),
+    .epc(cp0_epc)
 );
 
 endmodule

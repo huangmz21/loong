@@ -39,10 +39,12 @@ assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
+wire        bd_from_if;
 /*********************************/
 //Here we only need one-bit-wide excode, as only one type can happen during IF stage
 wire     ex_from_if;
-assign {ex_from_if,
+assign {bd_from_if,
+        ex_from_if,
         ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
 
@@ -192,6 +194,9 @@ wire        inst_lh;
 wire        inst_lhu;
 wire        inst_sb;
 wire        inst_sh;
+wire        inst_eret;
+
+assign      inst_eret = (ds_inst==32'h4200_0018);
 //////0
 
 wire        dst_is_r31;  
@@ -206,10 +211,13 @@ wire        rs_eq_rt;
 
 assign br_bus       = {br_taken,br_target};
 /*********************************************/
-wire       signed_op;
+wire       signed_op    ;
 reg        ds_ex;
-reg [ 4:0] ds_excode;
-wire       inst_undef;  // indicate whether the instruction is undefined or not
+reg [ 4:0] ds_excode    ;
+wire       inst_syscall ;
+wire       inst_break   ;
+wire       inst_undef   ;  // indicate whether the instruction is undefined or not
+assign inst_undef = 1'b0;  //--------------------------temp
                         // !!!!!!!!!!!!!!!!!!!!!! absence of its logic part
 always @(*) begin
     if (ex_from_if) begin
@@ -237,8 +245,10 @@ end
 assign signed_op = ~func[0];
 
 
-assign ds_to_es_bus = {
+assign ds_to_es_bus = {res_from_cp0,  //171:171
                        //For exception
+                       inst_eret   ,    //170:170
+                       bd_from_if  ,  //169:169
                        // we of mtc0 passing to WB_stage
                        inst_mtc0   ,  //168:168
                        // address of the coprocessor0 register that the instruction wants to read or write

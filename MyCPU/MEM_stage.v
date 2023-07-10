@@ -22,6 +22,7 @@ module mem_stage(
     //input  [2*5              -1:0] es_to_ms_addr ,
     //output [2*5              -1:0] ms_to_ws_addr 
 
+    output          ex_to_es                    ,
     input           ex_from_ws        //Need to flush
 );
 
@@ -31,7 +32,7 @@ wire        ms_ready_go;
  (* keep = "true" *) reg [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus_r;
 
 wire        ex_from_es;
-wire        excode_from_es;
+wire [4:0]  excode_from_es;
 wire        ms_res_from_cp0;
 
 //////1
@@ -54,7 +55,9 @@ wire        mtc0_we_from_es;
 wire        mtc0_we_ms;
 wire [31:0] ms_rt_value;
 assign mtc0_we_ms = mtc0_we_from_es;
-assign {mtc0_we_from_es,
+assign {inst_eret ,
+        bd_from_if,
+        mtc0_we_from_es,
         ms_cp0_addr    ,
         ex_from_es     ,
         excode_from_es ,
@@ -73,16 +76,23 @@ assign {mtc0_we_from_es,
         ms_pc             //31:0
        } = es_to_ms_bus_r;
 
+
+assign ms_ex = ex_from_es;
+assign ex_to_es = ms_ex;
+
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
-assign ms_to_ws_bus = {
+assign ms_to_ws_bus = {ms_rt_value,      //148:117
+                       inst_eret ,       //116:116
+                       bd_from_if,       //115:115
                        mtc0_we_ms    ,   //114:114
                        ms_cp0_addr    ,  //113:109
                        ms_res_from_cp0,  //108:108
                        ms_alu_result  ,  //107:76
                        ms_ex,            //75:75
                        ms_excode,        //74:70
+
                        //////0
                        ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64

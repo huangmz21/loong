@@ -14,9 +14,6 @@ module wb_stage(
     /**********************/
     //from cp0: data for mtc0
     input  [31:0] cp0_rdata       ,
-    //to cp0:
-    output [ 4:0] cp0_addr        ,
-    output [31:0] cp0_wdata       ,
     output [`WB_TO_CP0_REGISTER_BUS_WD -1:0] wb_to_cp0_register_bus,
     /**********************/
 
@@ -28,7 +25,8 @@ module wb_stage(
     output [ 4:0] debug_wb_rf_wnum,
     output [31:0] debug_wb_rf_wdata,
 
-    output        ws_ex  //Used as a signal of flushing the pipeline
+    output        ws_ex , //Used as a signal of flushing the pipeline
+    output        ws_eret
 );
 
  (* keep = "true" *) reg         ws_valid;
@@ -49,13 +47,18 @@ wire        ws_res_from_cp0;
 wire [ 4:0] ws_cp0_addr;
 wire [ 4:0] ws_excode;
 wire        ws_ex;
-wire        excode_from_ms;
-assign {mtc0_we_from_ms,
+wire [ 4:0] excode_from_ms;
+wire [31:0] ws_rt_value;
+assign {ws_rt_value,
+        inst_eret,
+        bd_from_if,
+        mtc0_we_from_ms,
         ws_cp0_addr    ,
         ws_res_from_cp0,  // mfc0: load the value of CP0[rd,sel] to R[rt]
+        badvaddr_from_ms, //wrong virtual address passed to WB_stage
         ex_from_ms     ,
         excode_from_ms ,
-        badvaddr_from_ms, //wrong virtual address passed to WB_stage
+        
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
@@ -63,7 +66,9 @@ assign {mtc0_we_from_ms,
        } = ms_to_ws_bus_r;
 
 assign ws_excode = excode_from_ms;
-assign ws_ex     = ex_from_ms;
+assign ws_ex     = ex_from_ms || eret_flush;
+
+assign ws_eret = eret_flush;
 
 wire        rf_we;
 wire [4 :0] rf_waddr;
@@ -73,16 +78,21 @@ assign ws_to_rf_bus = {rf_we   ,  //37:37
                        rf_wdata   //31:0
                       };
 
-wire        ws_bd; // ! absence of its' logical part
-assign wb_to_cp0_register_bus = {ws_ex,
-                                 ws_excode,
-                                 badvaddr_from_ms,
-                                 ws_bd,
-                                 ws_pc,
-                                 mtc0_we_from_ms,
-                                 ws_cp0_addr,
-                                 ws_rt_value
-                                 // ! eret_flush signal to be finished
+wire        ws_bd;
+assign      ws_bd = bd_from_if; 
+
+wire        eret_flush; 
+assign      eret_flush = inst_eret;
+wire [31:0] badvaddr_from_ms;
+assign wb_to_cp0_register_bus = {ws_ex,             //110:110
+                                 ws_excode,         //109:104
+                                 badvaddr_from_ms,  //103:72
+                                 ws_bd,             //71:71
+                                 ws_pc,             //70:39
+                                 mtc0_we_from_ms,   //38:38
+                                 ws_cp0_addr,       //37:33
+                                 ws_rt_value,       //32:1
+                                 eret_flush         //0:0
                                 };
 
 assign ws_ready_go = 1'b1;
