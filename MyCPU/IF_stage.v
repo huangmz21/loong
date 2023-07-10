@@ -19,7 +19,10 @@ module if_stage(
     input  [31:0] inst_sram_rdata,
     //stall
     input [1:0] stallF,
-    input       ex_from_ws        //Need to flush
+    input       ex_from_ws,        //Need to flush
+    input       bd_from_ds, // connect to id_stage's output -- ifbranch
+    input       eret_from_ws,
+    input [31:0]cp0_epc
 );
 
  (* keep = "true" *) reg         fs_valid;
@@ -42,7 +45,8 @@ assign if_ex = (fs_pc[1:0]==2'b00) ? 0 : 1;
 /*wire [4:0] if_excode;
 assign if_excode = 0x04; in ID_stage we determine the excode value using if_ex signal*/
 
-assign fs_to_ds_bus = {if_ex,     //64:64
+assign fs_to_ds_bus = {bd_from_ds,//65:65
+                       if_ex,     //64:64
                        fs_inst ,  //63:32
                        fs_pc      //31:0   
                        };
@@ -68,8 +72,11 @@ always @(posedge clk) begin
     if (reset) begin
         fs_pc <= 32'hbfbf_fffc;  //trick: to make nextpc be 0xbfc00000 during reset 
     end
-    else if (ex_from_ws) begin
+    else if (ex_from_ws&&~eret_from_ws) begin
         fs_pc <= 32'hbfc0_037c;  //jump to the exception handler
+    end
+    else if (eret_from_ws) begin
+        fs_pc <= cp0_epc - 32'h4;
     end
     else if (to_fs_valid && fs_allowin) begin
         fs_pc <= nextpc;

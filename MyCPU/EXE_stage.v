@@ -11,9 +11,8 @@ module exe_stage(
     input  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus  ,
     /*********************************************/
     //from mem
-    input  [`MS_TO_ES_BUS_WD -1:0] ms_to_es_bus  ,
-    //from wb
-    input  [`WS_TO_ES_BUS_WD -1:0] ws_to_es_bus  ,
+    input                          ex_from_ms    ,
+    input                          ex_from_ws    ,//Need to flush
     /*********************************************/
     //to ms
     output                         es_to_ms_valid,
@@ -34,10 +33,7 @@ module exe_stage(
     input [1:0] stallE,
     input  [2*5              -1:0] ds_to_es_addr,
     output [2*5              -1:0] es_to_ms_addr,
-    output                         es_stop,
-
-    input                          ex_from_ws     //Need to flush
-    
+    output                         es_stop
 );
 
  (* keep = "true" *) reg         es_valid      ;
@@ -118,7 +114,8 @@ assign {es_f_ctrl1,   //3:2
         } = es_forward_ctrl;
 
 assign {
-
+        inst_eret ,       //170:170
+        bd_from_if,       //169:169
         //For exception
         mtc0_we_from_id,  //168:168
         es_cp0_addr    ,  //167:163
@@ -126,7 +123,7 @@ assign {
         ex_from_id     ,  //161:161
         excode_from_id ,  //160:156
         //end
-        /// ·Ç¶ÔÆë·Ã´æ
+        /// ï¿½Ç¶ï¿½ï¿½ï¿½Ã´ï¿?
                        
         es_res_from_mem_lwl,   //155:155
         es_res_from_mem_lwr,   //154:154
@@ -203,12 +200,7 @@ assign es_rt_value = es_f_ctrl2==2'b01    ? es_forward_ms:
                      es_f_ctrl2==2'b10    ? es_forward_ws :
                                       es_rt_value_t;
 
-//?????????????????????????????????????
-assign {ex_from_cur_ms
-       } = ms_to_es_bus;
 
-assign {ex_from_cur_ws
-       } = ws_to_es_bus;
 
 reg        overflow       ;
 reg        es_ex          ;
@@ -232,11 +224,14 @@ always @(*) begin
         es_ex     <= 1'b1;
         es_excode <= excode_from_id;
     end
-    else if (es_load_op && es_alu_result[1:0]!=2'b00) begin
+    // ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ë·Ç¶ï¿½ï¿½ï¿½Ã´ï¿?////////////////////////////////////////////////////0
+    else if ((es_res_from_mem_w && es_alu_result[1:0]!=2'b00)||
+                (es_res_from_mem_h && es_alu_result[0]!=1'b0)) begin
         es_ex     <= 1'b1;
         es_excode <= 5'h04;
     end
-    else if (es_mem_we && es_alu_result[1:0]!=2'b00) begin
+    else if ((es_mem_we_w && es_alu_result[1:0]!=2'b00) ||
+                (es_mem_we_h && es_alu_result[0]!=1'b0)) begin
         es_ex     <= 1'b1;
         es_excode <= 5'h05;
     end
@@ -246,12 +241,14 @@ always @(*) begin
     end 
     else begin
         es_ex     <= 1'b0;
-        es_excode <= 5'hxx; // ! do need to be undetermined? 
+        //es_excode <= 5'hxx; // ! do need to be undetermined? 
     end
 end
 
-//è¾“å‡ºçš„æ—¶å€™å’Œvalid åšä¸Žè¿ç®—
+//ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½valid ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 assign es_to_ms_bus = {
+                       inst_eret      ,   //124:124
+                       bd_from_if     ,   //123:123
                        // For exception
                        mtc0_we_es     ,   //122:122
                        es_cp0_addr    ,   //121:117
@@ -288,7 +285,7 @@ always @(posedge clk) begin
     end
     if (ds_to_es_valid && es_allowin) begin 
         ds_to_es_bus_r <= ds_to_es_bus;
-        ds_to_es_addr_r<=ds_to_es_addr;//è¿™ä¸ªå¯„å­˜å™¨ç”¨æ¥å­˜å‚¨ä¸Šä¸€ä¸ªå‘¨æœŸçš„åœ°å€ï¼Œç”¨äºŽforward
+        ds_to_es_addr_r<=ds_to_es_addr;//Õâ¸ö¼Ä´æÆ÷ÓÃÀ´´æ´¢ÉÏÒ»¸öÖÜÆÚµÄµØÖ·£¬ÓÃÓÚforward
     end
 end
 
@@ -375,7 +372,8 @@ assign es_final_alu_result = es_res_from_hi ? es_h_rdata:
                              es_res_from_lo ? es_l_rdata:
                              es_alu_result;
 assign data_sram_en    = 1'b1;
-assign data_sram_wen   = es_mem_we_w&&es_valid ? 4'hf : 
+assign data_sram_wen   = (ex_from_ms||ex_from_ws||es_ex)?4'h0:
+                         es_mem_we_w&&es_valid ? 4'hf : 
                          es_mem_we_h&&~es_alu_result[1]&&es_valid ? 4'h3 : 
                          es_mem_we_h&& es_alu_result[1]&&es_valid ? 4'hc : 
                          es_mem_we_b&&~es_alu_result[1]&&~es_alu_result[0]&&es_valid ? 4'h1 : 
@@ -415,7 +413,7 @@ assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
                          es_mem_we_swr ? data_sram_wdata_swr:
                          data_sram_wdata_t;
 
-//hazard unit  å¤„ç†EX_MEM å’? MEM_WB ä¹‹é—´çš„æ•°æ®å†’é™?
+//hazard unit  ï¿½ï¿½ï¿½ï¿½EX_MEM ï¿½ï¿½ MEM_WB Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½ï¿?
 wire es_src1_is_ex_mem ;
 wire es_src2_is_ex_mem ;
 wire es_src1_is_mem_wb ;
