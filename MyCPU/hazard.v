@@ -66,7 +66,7 @@ assign ds_forward_ctrl={ds_f_ctrl1,  //1:1
 reg [1:0] sF;
 reg [1:0] sD;
 reg [1:0] sE;
-//assign stallF=sF;
+assign stallF=sF;
 assign stallD=sD;
 assign stallE=sE;
 wire ifmfc0;
@@ -102,7 +102,7 @@ end
 
 
 //EX forward ,deal with alu_use
-//�����mem�׶ε���01�������wb�׶ε���10�������������00,�����Lw_sw��11
+//�����mem�׶ε���01�������wb�׶ε���10�������������?00,�����Lw_sw��11
 reg [1:0]es_f_ctrl1;
 reg [1:0]es_f_ctrl2;
 always @(*) begin
