@@ -22,7 +22,8 @@ module if_stage(
     input       ex_from_ws,        //Need to flush
     input       bd_from_ds, // connect to id_stage's output -- ifbranch
     input       eret_from_ws,
-    input [31:0]cp0_epc
+    input [31:0]cp0_epc,
+    output fs_valid_h
 );
 
  (* keep = "true" *) reg         fs_valid;
@@ -96,5 +97,6 @@ assign inst_sram_addr  = nextpc;
 assign inst_sram_wdata = 32'b0;
 
 assign fs_inst         = inst_sram_rdata;
+assign fs_valid_h = fs_valid;
 
 endmodule

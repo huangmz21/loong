@@ -28,7 +28,7 @@ module exe_stage(
     //forward control
     input [2*2-1:0] es_forward_ctrl,
     output es_mem_we_tohazard,
-    output es_valid_tohazard,
+    output es_valid_h,
     // stall control
     input [1:0] stallE,
     input  [2*5              -1:0] ds_to_es_addr,
@@ -38,7 +38,7 @@ module exe_stage(
 );
 
  (* keep = "true" *) reg         es_valid      ;
- assign es_valid_tohazard = es_valid;
+ assign es_valid_h = es_valid;
 wire        es_ready_go   ;
 
  (* keep = "true" *) reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
