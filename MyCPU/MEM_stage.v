@@ -117,6 +117,9 @@ always @(posedge clk) begin
     if (es_to_ms_valid && ms_allowin) begin
         es_to_ms_bus_r  <= es_to_ms_bus;
     end
+    else begin
+        es_to_ms_bus_r[116] <= 1'b0;
+    end
 end
 wire [31:0] mem_result_t1;
 wire [1:0] ms_addr_last;

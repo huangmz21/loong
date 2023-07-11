@@ -27,7 +27,7 @@ module wb_stage(
     output ws_res_from_cp0_h,
     output ws_valid_h,
 
-    output        ws_ex , //Used as a signal of flushing the pipeline
+    output        ws_ex_forward , //Used as a signal of flushing the pipeline
     output        ws_eret
 );
 
@@ -67,8 +67,10 @@ assign {ws_rt_value,
         ws_pc             //31:0
        } = ms_to_ws_bus_r;
 
+wire   ws_ex;
 assign ws_excode = excode_from_ms;
-assign ws_ex     = ex_from_ms || eret_flush;
+assign ws_ex     = ex_from_ms;
+assign ws_ex_forward = ex_from_ms || eret_flush;
 
 assign ws_eret = eret_flush;
 
@@ -109,6 +111,9 @@ always @(posedge clk) begin
 
     if (ms_to_ws_valid && ws_allowin) begin
         ms_to_ws_bus_r <= ms_to_ws_bus;
+    end
+    else begin
+        ms_to_ws_bus_r[75] <= 1'b0;
     end
 end
 

@@ -285,6 +285,12 @@ always @(posedge clk) begin
     else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
     end
+    else if ( ~es_allowin && es_f_ctrl1!=2'b00) begin
+        ds_to_es_bus_r[95:64] <= es_alu_src1;
+    end
+    else if ( ~es_allowin && es_f_ctrl2!=2'b00) begin
+        ds_to_es_bus_r[63:32] <= es_alu_src2;
+    end
     if (ds_to_es_valid && es_allowin) begin 
         ds_to_es_bus_r <= ds_to_es_bus;
         ds_to_es_addr_r<=ds_to_es_addr;//����Ĵ��������洢��һ�����ڵĵ�ַ������forward
