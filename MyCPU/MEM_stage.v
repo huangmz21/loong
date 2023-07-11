@@ -81,6 +81,7 @@ assign {inst_eret ,
 
 assign ms_ex = ex_from_es;
 assign ex_to_es = ms_ex;
+assign ms_excode = excode_from_es;
 
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
@@ -115,6 +116,9 @@ always @(posedge clk) begin
 
     if (es_to_ms_valid && ms_allowin) begin
         es_to_ms_bus_r  <= es_to_ms_bus;
+    end
+    else begin
+        es_to_ms_bus_r[116] <= 1'b0;
     end
 end
 wire [31:0] mem_result_t1;

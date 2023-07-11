@@ -27,7 +27,7 @@ module wb_stage(
     output ws_res_from_cp0_h,
     output ws_valid_h,
 
-    output        ws_ex , //Used as a signal of flushing the pipeline
+    output        ws_ex_forward , //Used as a signal of flushing the pipeline
     output        ws_eret
 );
 
@@ -67,8 +67,10 @@ assign {ws_rt_value,
         ws_pc             //31:0
        } = ms_to_ws_bus_r;
 
+wire   ws_ex;
 assign ws_excode = excode_from_ms;
-assign ws_ex     = ex_from_ms || eret_flush;
+assign ws_ex     = ex_from_ms;
+assign ws_ex_forward = ex_from_ms || eret_flush;
 
 assign ws_eret = eret_flush;
 
@@ -86,12 +88,15 @@ assign      ws_bd = bd_from_if;
 wire        eret_flush; 
 assign      eret_flush = inst_eret;
 
+wire mtc0_we;
+assign mtc0_we = mtc0_we_from_ms && ws_valid;
+
 assign wb_to_cp0_register_bus = {ws_ex,             //110:110
                                  ws_excode,         //109:104
                                  badvaddr_from_ms,  //103:72
                                  ws_bd,             //71:71
                                  ws_pc,             //70:39
-                                 mtc0_we_from_ms,   //38:38
+                                 mtc0_we,   //38:38
                                  ws_cp0_addr,       //37:33
                                  ws_rt_value,       //32:1
                                  eret_flush         //0:0
@@ -110,6 +115,9 @@ always @(posedge clk) begin
     if (ms_to_ws_valid && ws_allowin) begin
         ms_to_ws_bus_r <= ms_to_ws_bus;
     end
+    else begin
+        ms_to_ws_bus_r[75] <= 1'b0;
+    end
 end
 
 /************************************/
@@ -124,14 +132,14 @@ assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
 /********************************/
-assign es_forward_ws = ws_final_result;/////æ˜¯å¦æ”¹æˆrf_wdataï¿½?
+assign es_forward_ws = ws_final_result;/////æ˜¯å¦æ”¹æˆrf_wdataï¿??
 
 // debug info generate
 assign debug_wb_pc       = ws_pc;
 assign debug_wb_rf_wen   = {4{rf_we}};
 assign debug_wb_rf_wnum  = ws_dest;
 //----------------0
-assign debug_wb_rf_wdata = ws_final_result;
+assign debug_wb_rf_wdata = rf_wdata;  //¸ü¸ÄÁËdebug×¥È¡µÄÐÅÏ¢
 assign ws_res_from_cp0_h =ws_res_from_cp0 && ws_valid;
 assign ws_valid_h =ws_valid;
 endmodule

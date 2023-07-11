@@ -75,7 +75,7 @@ wire [1:0] stallE;
 wire ex_from_ms_to_es;
 
 wire eret_from_ws;
-wire cp0_epc;
+wire [31:0 ]cp0_epc;
 
 // IF stage
 if_stage if_stage(
@@ -221,7 +221,7 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
 
-    .ws_ex(ex_from_ws)                   ,
+    .ws_ex_forward(ex_from_ws)                   ,
 
     .cp0_rdata(cp0_rdata)                ,
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
@@ -270,7 +270,7 @@ hazard hazard (
     .ws_valid_h(ws_valid_h),
 
     //stall and flush
-    //00=normalï¿½?01=stallï¿½?10=flush
+    //00=normalï¿??01=stallï¿??10=flush
     .stallF(stallF),
     .stallD(stallD),
     //.stallF(stallF),

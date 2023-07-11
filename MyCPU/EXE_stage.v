@@ -125,7 +125,7 @@ assign {es_cp0_op,        //171:171
         ex_from_id     ,  //161:161
         excode_from_id ,  //160:156
         //end
-        /// �Ƕ���ô�?
+        /// �Ƕ���ô�??
                        
         es_res_from_mem_lwl,   //155:155
         es_res_from_mem_lwr,   //154:154
@@ -188,8 +188,8 @@ always @(posedge clk)begin
         diva<=0;
 end
 
-assign es_tvalid  = (es_mudi[2] & ~diva);
-assign es_tvalidu = (es_mudi[3] & ~diva);
+assign es_tvalid  = (es_mudi[2] & ~diva) && ~ex_from_ms;
+assign es_tvalidu = (es_mudi[3] & ~diva) && ~ex_from_ms;
 //////0
 
 wire        es_res_from_mem;
@@ -226,7 +226,7 @@ always @(*) begin
         es_ex     <= 1'b1;
         es_excode <= excode_from_id;
     end
-    // �����⣬�����˷Ƕ���ô�?////////////////////////////////////////////////////0
+    // �����⣬�����˷Ƕ���ô�??////////////////////////////////////////////////////0
     else if ((es_res_from_mem_w && es_alu_result[1:0]!=2'b00)||
                 (es_res_from_mem_h && es_alu_result[0]!=1'b0)) begin
         es_ex     <= 1'b1;
@@ -243,7 +243,7 @@ always @(*) begin
     end 
     else begin
         es_ex     <= 1'b0;
-        //es_excode <= 5'hxx; // ! do need to be undetermined? 
+        es_excode <= 5'hxx; // ! do need to be undetermined? 
     end
 end
 
@@ -284,6 +284,12 @@ always @(posedge clk) begin
     end
     else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
+    end
+    else if ( ~es_allowin && es_f_ctrl1!=2'b00) begin
+        ds_to_es_bus_r[95:64] <= es_alu_src1;
+    end
+    else if ( ~es_allowin && es_f_ctrl2!=2'b00) begin
+        ds_to_es_bus_r[63:32] <= es_alu_src2;
     end
     if (ds_to_es_valid && es_allowin) begin 
         ds_to_es_bus_r <= ds_to_es_bus;
@@ -351,12 +357,12 @@ assign es_l_wdata = (es_mudi[0] | es_mudi[1]) ? es_prodata[31:0]  :
                     es_dst_is_lo ? es_alu_src1                    :
                     0;
 
-assign es_stop = (es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu);
-//assign es_hl_we= es_hl_we & es_tvalid_out;///////////////////////////////////////////////////////////////////
-
+assign es_stop = ((es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu))&& ~ex_from_ms;
+wire [1:0] es_hl_we_in; //considering exception from ms.
+assign es_hl_we_in = es_hl_we & {2{~ex_from_ms}};
 hilo hilo1(
     .clk(clk),
-    .hl_we(es_hl_we),
+    .hl_we(es_hl_we_in),
     .h_wdata(es_h_wdata),
     .l_wdata(es_l_wdata),
     .h_rdata(es_h_rdata),
@@ -415,7 +421,7 @@ assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
                          es_mem_we_swr ? data_sram_wdata_swr:
                          data_sram_wdata_t;
 
-//hazard unit  ����EX_MEM �� MEM_WB ֮�������ð��?
+//hazard unit  ����EX_MEM �� MEM_WB ֮�������ð��??
 wire es_src1_is_ex_mem ;
 wire es_src2_is_ex_mem ;
 wire es_src1_is_mem_wb ;

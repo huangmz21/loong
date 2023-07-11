@@ -109,21 +109,21 @@ end
 
 
 //EX forward ,deal with alu_use
-//�����mem�׶ε���01�������wb�׶ε���10�������������00,�����Lw_sw��11
+//�����mem�׶ε���01�������wb�׶ε���10�������������?00,�����Lw_sw��11
 reg [1:0]es_f_ctrl1;
 reg [1:0]es_f_ctrl2;
 always @(*) begin
-    if(es_rf_raddr1!=0 && ms_gr_we && es_rf_raddr1==ms_dest)
+    if(es_rf_raddr1!=0 && ms_gr_we && es_rf_raddr1==ms_dest && ms_valid_h)
         es_f_ctrl1=2'b01;
-    else if(es_rf_raddr1!=0 && ws_gr_we && es_rf_raddr1==ws_dest)
+    else if(es_rf_raddr1!=0 && ws_gr_we && es_rf_raddr1==ws_dest && ws_valid_h)
         es_f_ctrl1=2'b10;
     else 
         es_f_ctrl1=2'b00;
 end
 always @(*) begin
-    if(es_rf_raddr2!=0 && ms_gr_we && es_rf_raddr2==ms_dest) //��һ��R�ͣ���memת����exe��exeִ��R����sw
+    if(es_rf_raddr2!=0 && ms_gr_we && es_rf_raddr2==ms_dest && ms_valid_h) //��һ��R�ͣ���memת����exe��exeִ��R����sw
         es_f_ctrl2=2'b01;
-    else if(es_rf_raddr2!=0 && ws_gr_we && es_rf_raddr2==ws_dest)//����һ��R�ͣ���wbת����exe
+    else if(es_rf_raddr2!=0 && ws_gr_we && es_rf_raddr2==ws_dest && ws_valid_h)//����һ��R�ͣ���wbת����exe
         es_f_ctrl2=2'b10;
     else 
         es_f_ctrl2=2'b00;
