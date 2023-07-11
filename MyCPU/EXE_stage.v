@@ -188,8 +188,8 @@ always @(posedge clk)begin
         diva<=0;
 end
 
-assign es_tvalid  = (es_mudi[2] & ~diva);
-assign es_tvalidu = (es_mudi[3] & ~diva);
+assign es_tvalid  = (es_mudi[2] & ~diva) && ~ex_from_ms;
+assign es_tvalidu = (es_mudi[3] & ~diva) && ~ex_from_ms;
 //////0
 
 wire        es_res_from_mem;
@@ -357,12 +357,12 @@ assign es_l_wdata = (es_mudi[0] | es_mudi[1]) ? es_prodata[31:0]  :
                     es_dst_is_lo ? es_alu_src1                    :
                     0;
 
-assign es_stop = (es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu);
-//assign es_hl_we= es_hl_we & es_tvalid_out;///////////////////////////////////////////////////////////////////
-
+assign es_stop = ((es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu))&& ~ex_from_ms;
+wire [1:0] es_hl_we_in; //considering exception from ms.
+assign es_hl_we_in = es_hl_we & {2{~ex_from_ms}};
 hilo hilo1(
     .clk(clk),
-    .hl_we(es_hl_we),
+    .hl_we(es_hl_we_in),
     .h_wdata(es_h_wdata),
     .l_wdata(es_l_wdata),
     .h_rdata(es_h_rdata),

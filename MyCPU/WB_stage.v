@@ -88,12 +88,15 @@ assign      ws_bd = bd_from_if;
 wire        eret_flush; 
 assign      eret_flush = inst_eret;
 
+wire mtc0_we;
+assign mtc0_we = mtc0_we_from_ms && ws_valid;
+
 assign wb_to_cp0_register_bus = {ws_ex,             //110:110
                                  ws_excode,         //109:104
                                  badvaddr_from_ms,  //103:72
                                  ws_bd,             //71:71
                                  ws_pc,             //70:39
-                                 mtc0_we_from_ms,   //38:38
+                                 mtc0_we,   //38:38
                                  ws_cp0_addr,       //37:33
                                  ws_rt_value,       //32:1
                                  eret_flush         //0:0
