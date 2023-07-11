@@ -107,6 +107,7 @@ assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
     if (reset || ws_ex) begin
         ws_valid <= 1'b0;
+        ms_to_ws_bus_r[75] <= 1'b0;
     end
     else if (ws_allowin) begin
         ws_valid <= ms_to_ws_valid;
@@ -127,7 +128,7 @@ assign cp0_addr = ws_cp0_addr;
 
 
 /************************************/
-assign rf_we    = ws_gr_we&&ws_valid;
+assign rf_we    = ws_gr_we && ws_valid && ~ws_ex;
 assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
