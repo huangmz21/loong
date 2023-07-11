@@ -33,6 +33,7 @@ module exe_stage(
     input [1:0] stallE,
     input  [2*5              -1:0] ds_to_es_addr,
     output [2*5              -1:0] es_to_ms_addr,
+    output es_res_from_cp0_h,
     output                         es_stop
 );
 
@@ -124,7 +125,7 @@ assign {es_cp0_op,        //171:171
         ex_from_id     ,  //161:161
         excode_from_id ,  //160:156
         //end
-        /// ï¿½Ç¶ï¿½ï¿½ï¿½Ã´ï¿?
+        /// ï¿½Ç¶ï¿½ï¿½ï¿½Ã´ï¿½?
                        
         es_res_from_mem_lwl,   //155:155
         es_res_from_mem_lwr,   //154:154
@@ -225,7 +226,7 @@ always @(*) begin
         es_ex     <= 1'b1;
         es_excode <= excode_from_id;
     end
-    // ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ë·Ç¶ï¿½ï¿½ï¿½Ã´ï¿?////////////////////////////////////////////////////0
+    // ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ë·Ç¶ï¿½ï¿½ï¿½Ã´ï¿½?////////////////////////////////////////////////////0
     else if ((es_res_from_mem_w && es_alu_result[1:0]!=2'b00)||
                 (es_res_from_mem_h && es_alu_result[0]!=1'b0)) begin
         es_ex     <= 1'b1;
@@ -286,7 +287,7 @@ always @(posedge clk) begin
     end
     if (ds_to_es_valid && es_allowin) begin 
         ds_to_es_bus_r <= ds_to_es_bus;
-        ds_to_es_addr_r<=ds_to_es_addr;//Õâ¸ö¼Ä´æÆ÷ÓÃÀ´´æ´¢ÉÏÒ»¸öÖÜÆÚµÄµØÖ·£¬ÓÃÓÚforward
+        ds_to_es_addr_r<=ds_to_es_addr;//ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ÚµÄµï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½forward
     end
 end
 
@@ -414,12 +415,12 @@ assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
                          es_mem_we_swr ? data_sram_wdata_swr:
                          data_sram_wdata_t;
 
-//hazard unit  ï¿½ï¿½ï¿½ï¿½EX_MEM ï¿½ï¿½ MEM_WB Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½ï¿?
+//hazard unit  ï¿½ï¿½ï¿½ï¿½EX_MEM ï¿½ï¿½ MEM_WB Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½ï¿½?
 wire es_src1_is_ex_mem ;
 wire es_src2_is_ex_mem ;
 wire es_src1_is_mem_wb ;
 wire es_src2_is_mem_wb ;
-
+assign  es_res_from_cp0_h = es_res_from_cp0 && es_valid;
 
 
 

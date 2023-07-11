@@ -24,6 +24,7 @@ module wb_stage(
     output [ 3:0] debug_wb_rf_wen ,
     output [ 4:0] debug_wb_rf_wnum,
     output [31:0] debug_wb_rf_wdata,
+    output ws_res_from_cp0_h,
 
     output        ws_ex , //Used as a signal of flushing the pipeline
     output        ws_eret
@@ -46,9 +47,9 @@ wire [31:0] ws_pc;
 wire        ws_res_from_cp0;
 wire [ 4:0] ws_cp0_addr;
 wire [ 4:0] ws_excode;
-wire        ws_ex;
 wire [ 4:0] excode_from_ms;
 wire [31:0] ws_rt_value;
+wire [31:0] badvaddr_from_ms;
 assign {ws_rt_value,
         inst_eret,
         bd_from_if,
@@ -83,7 +84,7 @@ assign      ws_bd = bd_from_if;
 
 wire        eret_flush; 
 assign      eret_flush = inst_eret;
-wire [31:0] badvaddr_from_ms;
+
 assign wb_to_cp0_register_bus = {ws_ex,             //110:110
                                  ws_excode,         //109:104
                                  badvaddr_from_ms,  //103:72
@@ -122,7 +123,7 @@ assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
 /********************************/
-assign es_forward_ws = ws_final_result;/////是否改成rf_wdata�?
+assign es_forward_ws = ws_final_result;/////是否改成rf_wdata�?
 
 // debug info generate
 assign debug_wb_pc       = ws_pc;
@@ -130,5 +131,5 @@ assign debug_wb_rf_wen   = {4{rf_we}};
 assign debug_wb_rf_wnum  = ws_dest;
 //----------------0
 assign debug_wb_rf_wdata = ws_final_result;
-
+assign ws_res_from_cp0_h =ws_res_from_cp0 && ws_valid;
 endmodule

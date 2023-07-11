@@ -19,6 +19,7 @@ module mem_stage(
     output [32-1:0] ds_forward_bus,
     output [32-1:0] es_forward_ms,
     output ms_res_from_mem,
+    output ms_res_from_cp0_h,
     //input  [2*5              -1:0] es_to_ms_addr ,
     //output [2*5              -1:0] ms_to_ws_addr 
 
@@ -150,5 +151,5 @@ assign ms_final_result = (ms_res_from_mem_w | ms_res_from_mem_h | ms_res_from_me
                           ms_alu_result;
 assign ds_forward_bus = ms_final_result;  
 assign es_forward_ms = ms_final_result;                                       
-
+assign ms_res_from_cp0_h =ms_res_from_cp0 && ms_valid;
 endmodule

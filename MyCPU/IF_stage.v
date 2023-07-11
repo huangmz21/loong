@@ -59,8 +59,15 @@ assign nextpc       = br_taken ? br_target : seq_pc;
 
 // IF stage
 assign fs_ready_go    = 1'b1;
-assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
-assign fs_to_ds_valid =  fs_valid && fs_ready_go;
+// assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
+// assign fs_to_ds_valid =  fs_valid && fs_ready_go;
+
+assign fs_allowin     = (stallF==2'b01)?1'b0:
+                        (stallF==2'b10)?1'b1:(!fs_valid || fs_ready_go && ds_allowin);
+
+assign fs_to_ds_valid = (stallF==2'b01)?1'b0:
+                        (stallF==2'b10)?1'b0:(fs_valid && fs_ready_go);
+
 always @(posedge clk) begin
     if (reset || ex_from_ws) begin
         fs_valid <= 1'b0;

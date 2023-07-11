@@ -55,12 +55,17 @@ wire [32-1:0] mem_result;
 wire ms_res_from_mem;
 
 //stall
-//wire [1:0] stallF;
 //////1exestop
 wire div_stop;
+wire ds_res_from_cp0_h;
+wire es_res_from_cp0_h;
+wire ms_res_from_cp0_h;
+wire ws_res_from_cp0_h;
 //////0
+wire [1:0] stallF;
 wire [1:0] stallD;
 wire [1:0] stallE;
+
 
 /////For Exception
 wire ex_from_ms_to_es;
@@ -85,7 +90,8 @@ if_stage if_stage(
     .inst_sram_addr (inst_sram_addr ),
     .inst_sram_wdata(inst_sram_wdata),
     .inst_sram_rdata(inst_sram_rdata),
-
+    //stall
+    .stallF(stallF),
     .ex_from_ws(ex_from_ws),
     .bd_from_ds(ifbranch),
     .eret_from_ws(eret_from_ws),
@@ -117,7 +123,8 @@ id_stage id_stage(
     //stall
     .stallD (stallD),
     .ds_to_es_addr(ds_to_es_addr),
-    .ifbranch(ifbranch)
+    .ifbranch(ifbranch),
+    .ds_res_from_cp0_h(ds_res_from_cp0_h)
 );
 // EXE stage
 exe_stage exe_stage(
@@ -152,8 +159,8 @@ exe_stage exe_stage(
     .stallE(stallE),
     .ds_to_es_addr(ds_to_es_addr),
     .es_to_ms_addr(es_to_ms_addr),
-    .es_stop(div_stop)
-
+    .es_stop(div_stop),
+    .es_res_from_cp0_h(es_res_from_cp0_h)
 
 );
 // MEM stage
@@ -179,7 +186,9 @@ mem_stage mem_stage(
     .es_forward_ms(es_forward_ms)   ,
     //.es_to_ms_addr(es_to_ms_addr),
     //.ms_to_ws_addr(ms_to_ws_addr)
-    .ex_to_es(ex_from_ms_to_es)
+    .ex_to_es(ex_from_ms_to_es),
+    //hazard
+    .ms_res_from_cp0_h(ms_res_from_cp0_h)
 );
 
 wire [31:0] cp0_rdata;
@@ -208,7 +217,8 @@ wb_stage wb_stage(
 
     .cp0_rdata(cp0_rdata)                ,
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
-    .ws_eret(eret_from_ws)
+    .ws_eret(eret_from_ws),
+    .ws_res_from_cp0_h(ws_res_from_cp0_h)
 );
 
 
@@ -219,6 +229,7 @@ hazard hazard (
     .rf_raddr2(ds_to_es_addr[4:0]), 
     .ds_forward_ctrl(ds_forward_ctrl),
     .mem_we(ds_to_es_bus[117]),
+    .ds_res_from_cp0_h(ds_res_from_cp0_h),
 
 
     //ex_stage alu
@@ -230,18 +241,22 @@ hazard hazard (
     .es_gr_we(es_to_ms_bus[69]),
     .es_forward_ctrl(es_forward_ctrl),
     .es_mem_we(es_mem_we),
+    .es_res_from_cp0_h(es_res_from_cp0_h),
 
     //mem_stage 
     .ms_dest(ms_to_ws_bus[68:64]),
     .ms_res_from_mem(ms_res_from_mem),
     .ms_gr_we(ms_to_ws_bus[69]),
+    .ms_res_from_cp0_h(ms_res_from_cp0_h),
 
     //wb_stage
     .ws_dest(ws_to_rf_bus[36:32]),
     .ws_gr_we(ws_to_rf_bus[37]),
+    .ws_res_from_cp0_h(ws_res_from_cp0_h),
 
     //stall and flush
-    //00=normalï¼?01=stallï¼?10=flush
+    //00=normalï¿½?01=stallï¿½?10=flush
+    .stallF(stallF),
     .stallD(stallD),
     //.stallF(stallF),
     .stallE(stallE),
