@@ -81,6 +81,7 @@ assign {inst_eret ,
 
 assign ms_ex = ex_from_es;
 assign ex_to_es = ms_ex;
+assign ms_excode = excode_from_es;
 
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
