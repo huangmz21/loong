@@ -26,6 +26,7 @@ module id_stage(
     output [10                -1:0] ds_to_es_addr,
     output                          ifbranch,
     output ds_res_from_cp0_h,
+    output ds_valid_h,
 
     input                           ex_from_ws        //Need to flush
 
@@ -514,4 +515,5 @@ assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgezal || inst_bgt
                    (inst_jr  || inst_jalr)              ? rs_value :
                   /*inst_jal/j*/              {fs_pc[31:28], jidx[25:0], 2'b0};
 assign ds_res_from_cp0_h = res_from_cp0 && ds_valid;
+assign ds_valid_h = ds_valid;
 endmodule

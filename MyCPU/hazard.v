@@ -1,14 +1,18 @@
 module hazard(
+    //if_stage
+    input fs_valid_h,
+
 
     //decode_stage beq
     input ifbranch,            //�Ƿ���ת
     input [4:0] rf_raddr1,       //ʹ�õ�Դ�Ĵ�����,IF�׶�
     input [4:0] rf_raddr2, 
     input mem_we,          
-    input ds_res_from_cp0_h,       
+    input ds_res_from_cp0_h,   
+    input ds_valid_h,    
     output [1:0] ds_forward_ctrl,
+
     //ex_stage alu
-    input es_valid,
     input [4:0] es_rf_raddr1,
     input [4:0] es_rf_raddr2,
     input [4:0] es_dest,
@@ -16,19 +20,22 @@ module hazard(
     input es_res_from_mem,
     input es_gr_we,
     input es_res_from_cp0_h,
+    input es_valid_h,
     output [3:0] es_forward_ctrl,
 
     //mem_stage 
     input [4:0] ms_dest,
     input ms_res_from_mem,
     input ms_gr_we,
+    input ms_valid_h,
     input   ms_res_from_cp0_h,  
 
     //wb_stage
     input [4:0] ws_dest,
     input ws_gr_we,
-    input ws_res_from_mem,
+    //input ws_res_from_mem,
     input ws_res_from_cp0_h,
+    input ws_valid_h,
 
     //stall and flush
     output [1:0] stallF,
@@ -46,13 +53,13 @@ reg ds_f_ctrl2;
 
 always @(*)
 begin
-    if(rf_raddr1!=0 && ms_gr_we && rf_raddr1==ms_dest)
+    if(rf_raddr1!=0 && ms_gr_we && rf_raddr1==ms_dest && ms_valid_h)
         ds_f_ctrl1=1'b1;
     else begin
         ds_f_ctrl1=1'b0;
     end
 
-    if(rf_raddr2!=0 && ms_gr_we && rf_raddr2==ms_dest)
+    if(rf_raddr2!=0 && ms_gr_we && rf_raddr2==ms_dest && ms_valid_h)
         ds_f_ctrl2=1'b1;
     else begin
         ds_f_ctrl2=1'b0;
@@ -66,14 +73,14 @@ assign ds_forward_ctrl={ds_f_ctrl1,  //1:1
 reg [1:0] sF;
 reg [1:0] sD;
 reg [1:0] sE;
-//assign stallF=sF;
+assign stallF=sF;
 assign stallD=sD;
 assign stallE=sE;
 wire ifmfc0;
 assign ifmfc0 = (ds_res_from_cp0_h || es_res_from_cp0_h || ms_res_from_cp0_h || ws_res_from_cp0_h);
 always @(*)
 begin
-    if(ifbranch &&  es_valid
+    if(ifbranch &&  es_valid_h
        &&( es_gr_we && (rf_raddr1==es_dest || rf_raddr2==es_dest))
     ) 
     begin

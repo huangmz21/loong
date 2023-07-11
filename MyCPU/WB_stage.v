@@ -25,6 +25,7 @@ module wb_stage(
     output [ 4:0] debug_wb_rf_wnum,
     output [31:0] debug_wb_rf_wdata,
     output ws_res_from_cp0_h,
+    output ws_valid_h,
 
     output        ws_ex , //Used as a signal of flushing the pipeline
     output        ws_eret
@@ -132,4 +133,5 @@ assign debug_wb_rf_wnum  = ws_dest;
 //----------------0
 assign debug_wb_rf_wdata = ws_final_result;
 assign ws_res_from_cp0_h =ws_res_from_cp0 && ws_valid;
+assign ws_valid_h =ws_valid;
 endmodule
