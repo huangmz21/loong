@@ -182,7 +182,7 @@ reg es_tvalid_r;
 always @(posedge clk)begin
     if(reset)
         diva<=0;
-    else if((es_tready && es_mudi[2]) | (es_treadyu && es_mudi[3]))
+    else if(((es_tready && es_mudi[2]) | (es_treadyu && es_mudi[3])) && ~ex_from_ms)
         diva<=1;
     else if(es_tvalid_out | es_tvalid_outu)
         diva<=0;
