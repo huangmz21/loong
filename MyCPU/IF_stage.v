@@ -46,7 +46,10 @@ assign if_ex = (fs_pc[1:0]==2'b00) ? 0 : 1;
 /*wire [4:0] if_excode;
 assign if_excode = 0x04; in ID_stage we determine the excode value using if_ex signal*/
 
-assign fs_to_ds_bus = {bd_from_ds,//65:65
+wire bd_to_ds; //not bd if this inst is not valid
+assign bd_to_ds = bd_from_ds && !if_ex;
+
+assign fs_to_ds_bus = {bd_to_ds,//65:65
                        if_ex,     //64:64
                        fs_inst ,  //63:32
                        fs_pc      //31:0   
