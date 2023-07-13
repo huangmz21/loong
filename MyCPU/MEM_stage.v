@@ -82,7 +82,7 @@ assign {inst_addr_ex_ms,
 
 
 assign ms_ex = ex_from_es;
-assign ex_to_es = ms_ex;
+assign ex_to_es = ms_ex || inst_eret; //eret also breaks former insts
 assign ms_excode = excode_from_es;
 
 wire [31:0] mem_result;

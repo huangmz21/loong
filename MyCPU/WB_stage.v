@@ -97,7 +97,7 @@ wire ws_ex_to_cp0; //this is kind of a write enable signal for cp0.
 assign ws_ex_to_cp0 = ws_ex && ws_valid; //Avoid sequence errors.
 
 wire [31:0] badvaddr_tp_cp0;
-assign badvaddr_tp_cp0 = inst_addr_ex_ws ? ws_pc-3'h4 : badvaddr_from_ms;
+assign badvaddr_tp_cp0 = inst_addr_ex_ws ? ws_pc : badvaddr_from_ms;
 
 assign wb_to_cp0_register_bus = {ws_ex_to_cp0,             //110:110
                                  ws_excode,         //109:104
@@ -113,7 +113,7 @@ assign wb_to_cp0_register_bus = {ws_ex_to_cp0,             //110:110
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset || ws_ex) begin
+    if (reset || ws_ex_forward) begin
         ws_valid <= 1'b0;
         ms_to_ws_bus_r[75] <= 1'b0;
         ms_to_ws_bus_r[149] <= 1'b0;
@@ -131,7 +131,7 @@ always @(posedge clk) begin
     end
 end
 
-assign rf_we    = ws_gr_we && ws_valid && ~ws_ex;
+assign rf_we    = ws_gr_we && ws_valid && ~ws_ex_forward; //ex_forward includes eret
 assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
