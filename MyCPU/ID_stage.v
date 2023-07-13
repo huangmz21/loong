@@ -222,8 +222,19 @@ reg [ 4:0] ds_excode    ;
 wire       inst_syscall ;
 wire       inst_break   ;
 wire       inst_undef   ;  // indicate whether the instruction is undefined or not
-assign inst_undef = 1'b0;  //--------------------------temp
-                        // !!!!!!!!!!!!!!!!!!!!!! absence of its logic part
+assign inst_undef = ~((inst_addu || inst_subu|| inst_slt || inst_sltu|| inst_and|| inst_or||
+                    inst_xor || inst_nor|| inst_sll|| inst_srl|| inst_sra|| inst_addiu ||
+                    inst_lui|| inst_lw|| inst_sw|| inst_beq|| inst_bne|| inst_jal ||
+                    inst_jr|| inst_mfc0|| inst_mtc0)||
+                    (inst_add|| inst_addi|| inst_sub|| inst_slti|| inst_sltiu|| inst_andi||
+                    inst_ori|| inst_xori|| inst_sllv||inst_srav|| inst_srlv||
+                    inst_mfhi|| inst_mflo|| inst_mthi|| inst_mtlo|| inst_mult||
+                    inst_multu|| inst_div|| inst_divu|| inst_bgez|| inst_bgtz|| inst_blez|| inst_bltz|| inst_j||
+                    inst_bltzal|| inst_bgezal|| inst_jalr|| inst_lb||
+                    inst_lbu|| inst_lh|| inst_lhu|| inst_sb|| inst_sh|| inst_eret)||
+                    inst_nop || inst_syscall ||inst_break ||
+                    inst_lwl||inst_lwr||inst_swl||inst_swr);
+
 always @(*) begin
     if (ex_from_if) begin
         ds_ex     <= 1'b1;

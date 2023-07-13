@@ -228,10 +228,8 @@ always @(*) begin
         es_excode <= excode_from_id;
     end
     // �����⣬�����˷Ƕ���ô�??////////////////////////////////////////////////////0
-    // Include mtc0 error here, as it saves rt_value to badaddr
     else if ((es_res_from_mem_w && es_alu_result[1:0]!=2'b00)||
                 (es_res_from_mem_h && es_alu_result[0]!=1'b0)) begin
-                    //(mtc0_we_es && (es_rt_value_t[1:0]!=2'b00) && (es_cp0_addr == `CR_EPC))//do we need this?
         es_ex     <= 1'b1;
         es_excode <= 5'h04;
     end
