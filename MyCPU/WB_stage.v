@@ -91,6 +91,9 @@ assign      eret_flush = inst_eret;
 wire mtc0_we;
 assign mtc0_we = mtc0_we_from_ms && ws_valid;
 
+wire ws_ex_ti_cp0; //this is kind of a write enable signal for cp0.
+assign ws_ex_ti_cp0 = ws_ex && ws_valid; //Avoid sequence errors.
+
 assign wb_to_cp0_register_bus = {ws_ex,             //110:110
                                  ws_excode,         //109:104
                                  badvaddr_from_ms,  //103:72
