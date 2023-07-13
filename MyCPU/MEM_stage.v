@@ -16,7 +16,7 @@ module mem_stage(
     //from data-sram
     input  [31                 :0] data_sram_rdata,
     //forward
-    output [32-1:0] ds_forward_bus,
+    output [32-1:0] ds_forward_ms,
     output [32-1:0] es_forward_ms,
     output ms_res_from_mem,
     output ms_res_from_cp0_h,
@@ -157,7 +157,7 @@ assign ms_final_result = (ms_res_from_mem_w | ms_res_from_mem_h | ms_res_from_me
                          (ms_res_from_mem_lwl) ? mem_result_lwl :
                          (ms_res_from_mem_lwr) ? mem_result_lwr :
                           ms_alu_result;
-assign ds_forward_bus = ms_final_result;  
+assign ds_forward_ms = ms_final_result;  
 assign es_forward_ms = ms_final_result;                                       
 assign ms_res_from_cp0_h =ms_res_from_cp0 && ms_valid;
 assign ms_valid_h = ms_valid;

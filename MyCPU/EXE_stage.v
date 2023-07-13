@@ -25,10 +25,12 @@ module exe_stage(
     //forward datapath
     input [32-1:0] es_forward_ms,
     input [32-1:0] es_forward_ws,
+    output[32-1:0] ds_forward_es,
     //forward control
     input [2*2-1:0] es_forward_ctrl,
     output es_mem_we_tohazard,
     output es_valid_h,
+    output es_res_from_mem,
     // stall control
     input [1:0] stallE,
     input  [2*5              -1:0] ds_to_es_addr,
@@ -193,7 +195,8 @@ assign es_tvalid  = (es_mudi[2] & ~diva) && ~ex_from_ms;
 assign es_tvalidu = (es_mudi[3] & ~diva) && ~ex_from_ms;
 //////0
 
-wire        es_res_from_mem;
+assign  es_res_from_mem = es_res_from_mem_w || es_res_from_mem_h || es_res_from_mem_b
+                          || es_res_from_mem_lwl || es_res_from_mem_lwr;
 //assign es_gr_we = es_gr_we && es_valid;
 //assign es_mem_we = es_mem_we && es_valid;
 // assign es_res_from_mem_w = es_res_from_mem_w && es_valid;
@@ -381,6 +384,7 @@ assign es_whb_mux = es_alu_result[1:0];
 assign es_final_alu_result = es_res_from_hi ? es_h_rdata:
                              es_res_from_lo ? es_l_rdata:
                              es_alu_result;
+assign ds_forward_es = es_final_alu_result;
 assign data_sram_en    = 1'b1;
 assign data_sram_wen   = (ex_from_ms||ex_from_ws||es_ex)?4'h0:
                          es_mem_we_w&&es_valid ? 4'hf : 

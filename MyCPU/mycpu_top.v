@@ -42,12 +42,14 @@ wire [`BR_BUS_WD       -1:0] br_bus;
 wire            ex_from_ws  ;
 //forward unit
 wire fs_valid_h;
-wire [32-1:0] ds_forward_bus;
-wire [2-1:0] ds_forward_ctrl;
+wire [31:0] ds_forward_es;
+wire [32-1:0] ds_forward_ms;
+wire [3:0] ds_forward_ctrl;
 wire ifbranch;
 wire [10-1:0] ds_to_es_addr;
 wire ds_valid_h;
 wire es_valid_h;
+wire es_res_from_mem;
 wire [10-1:0] es_to_ms_addr;
 wire [32-1:0] es_forward_ms;
 wire [32-1:0] es_forward_ws;
@@ -124,7 +126,8 @@ id_stage id_stage(
 
     .ex_from_ws(ex_from_ws),
     //forward datapath
-    .ds_forward_bus (ds_forward_bus),
+    .ds_forward_es (ds_forward_es),
+    .ds_forward_ms (ds_forward_ms),
     //forward control
     .ds_forward_ctrl(ds_forward_ctrl),
     //stall
@@ -158,11 +161,13 @@ exe_stage exe_stage(
     //forward datapath
     .es_forward_ms  (es_forward_ms  ),
     .es_forward_ws  (es_forward_ws  ),
+    .ds_forward_es  (ds_forward_es  ),
     //.mem_result(ms_to_ws_bus[63:32]),
     //forward control
     .es_forward_ctrl(es_forward_ctrl),
     .es_mem_we_tohazard(es_mem_we),
     .es_valid_h(es_valid_h),
+    .es_res_from_mem(es_res_from_mem),
     // stall control
     .stallE(stallE),
     .ds_to_es_addr(ds_to_es_addr),
@@ -191,7 +196,7 @@ mem_stage mem_stage(
     .ex_from_ws(ex_from_ws),
     //forward 
     .ms_res_from_mem(ms_res_from_mem),
-    .ds_forward_bus(ds_forward_bus),
+    .ds_forward_ms(ds_forward_ms),
     .es_forward_ms(es_forward_ms)   ,
     //.es_to_ms_addr(es_to_ms_addr),
     //.ms_to_ws_addr(ms_to_ws_addr)
@@ -253,7 +258,7 @@ hazard hazard (
     .es_rf_raddr1(es_to_ms_addr[9:5]),
     .es_rf_raddr2(es_to_ms_addr[4:0]),
     .es_dest(es_to_ms_bus[68:64]),
-    .es_res_from_mem(es_to_ms_bus[70]),
+    .es_res_from_mem(es_res_from_mem),
     .es_gr_we(es_to_ms_bus[69]),
     .es_forward_ctrl(es_forward_ctrl),
     .es_mem_we(es_mem_we),

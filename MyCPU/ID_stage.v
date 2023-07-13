@@ -18,9 +18,10 @@ module id_stage(
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus,
 
     //forward datapath
-    input [32-1:0] ds_forward_bus,
+    input [32-1:0] ds_forward_es,
+    input [32-1:0] ds_forward_ms,
     //forward control
-    input[2-1:0] ds_forward_ctrl,
+    input[3:0] ds_forward_ctrl,
     //stall
     input [1:0]stallD, 
     output [10                -1:0] ds_to_es_addr,
@@ -113,12 +114,12 @@ wire [31:0] rt_value;
 wire [31:0] ms_to_ds_fvalue1;
 wire [31:0] ms_to_ds_fvalue2;
 //forward ctrl
-wire ds_f_ctrl1;
-wire ds_f_ctrl2;
+wire [1:0] ds_f_ctrl1;
+wire [1:0] ds_f_ctrl2;
 
 assign {
-    ds_f_ctrl1,      //1:1
-    ds_f_ctrl2      //0:0
+    ds_f_ctrl1,      //3:2
+    ds_f_ctrl2      //1:0
 }=ds_forward_ctrl;
 
 
@@ -503,9 +504,12 @@ assign ds_to_es_addr={
     rf_raddr2      //4:0
 };
 
-assign rs_value = ds_f_ctrl1?ds_forward_bus:rf_rdata1;
-assign rt_value = ds_f_ctrl2?ds_forward_bus:rf_rdata2;
-
+assign rs_value = ds_f_ctrl1==2'b01 ? ds_forward_es:
+                  ds_f_ctrl1==2'b10 ? ds_forward_ms:
+                  rf_rdata1;
+assign rt_value = ds_f_ctrl2==2'b01 ? ds_forward_es:
+                  ds_f_ctrl2==2'b10 ? ds_forward_ms:
+                  rf_rdata2;
 assign rs_eq_rt = (rs_value == rt_value);
 assign ifbranch =(inst_beq || inst_bne || inst_bgez || inst_bgezal || inst_bgtz || inst_blez || inst_bltz || inst_bltzal
                  || inst_jal || inst_jr || inst_j || inst_jalr) ;

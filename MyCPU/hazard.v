@@ -4,13 +4,13 @@ module  hazard(
 
 
     //decode_stage beq
-    input ifbranch,            //send back to if, whether this is a branch instruction
+    input ifbranch,            //�Ƿ���ת
     input [4:0] rf_raddr1,       //ʹ�õ�Դ�Ĵ�����,IF�׶�
     input [4:0] rf_raddr2, 
     input mem_we,          
     input ds_res_from_cp0_h,   
     input ds_valid_h,    
-    output [1:0] ds_forward_ctrl,
+    output [3:0] ds_forward_ctrl,
 
     //ex_stage alu
     input [4:0] es_rf_raddr1,
@@ -48,25 +48,28 @@ module  hazard(
 );
 
 //ID forward 0=normal 1=ms_forward
-reg ds_f_ctrl1;
-reg ds_f_ctrl2;
+reg [1:0]ds_f_ctrl1;
+reg [1:0]ds_f_ctrl2;
 
 always @(*)
 begin
-    if(rf_raddr1!=0 && ms_gr_we && rf_raddr1==ms_dest && ms_valid_h)
-        ds_f_ctrl1=1'b1;
-    else begin
-        ds_f_ctrl1=1'b0;
-    end
-
-    if(rf_raddr2!=0 && ms_gr_we && rf_raddr2==ms_dest && ms_valid_h)
-        ds_f_ctrl2=1'b1;
-    else begin
-        ds_f_ctrl2=1'b0;
-    end
+    if(rf_raddr1!=0 && es_gr_we && rf_raddr1==es_dest && es_valid_h)
+        ds_f_ctrl1=2'b01;
+    else if(rf_raddr1!=0 && ms_gr_we && rf_raddr1==ms_dest && ms_valid_h)
+        ds_f_ctrl1=2'b10;
+    else 
+        ds_f_ctrl1=2'b00;
+    
+    if(rf_raddr2!=0 && es_gr_we && rf_raddr2==es_dest && es_valid_h)
+        ds_f_ctrl2=2'b01;
+    else if(rf_raddr2!=0 && ms_gr_we && rf_raddr2==ms_dest && ms_valid_h)
+        ds_f_ctrl2=2'b10;
+    else 
+        ds_f_ctrl2=2'b00;
+    
 end
-assign ds_forward_ctrl={ds_f_ctrl1,  //1:1
-                        ds_f_ctrl2   //0:0
+assign ds_forward_ctrl={ds_f_ctrl1,  //3:2
+                        ds_f_ctrl2   //1:0
                            };
 //ID stall
 //include change-beq stall , lw-use stall
@@ -81,7 +84,7 @@ assign ifmfc0 = (ds_res_from_cp0_h || es_res_from_cp0_h || ms_res_from_cp0_h || 
 always @(*)
 begin
     if(ifbranch &&  es_valid_h
-       &&( es_gr_we && (rf_raddr1==es_dest || rf_raddr2==es_dest))
+       &&( es_gr_we && es_res_from_mem &&(rf_raddr1==es_dest || rf_raddr2==es_dest))
     ) 
     begin
         sF=2'b00;
