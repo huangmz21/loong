@@ -88,7 +88,7 @@ assign cp0_addr = (rd_d[5'h08] & (sel==3'b000)) ? `CR_BADVADDR :
 //wire        load_op;
 wire        src1_is_sa;
 wire        src1_is_pc;
-//////1信号名更�??
+//////1信号名更�??
 wire        src2_is_simm;
 wire        src2_is_usimm;
 wire        src2_is_8;
@@ -249,8 +249,10 @@ end
 
 assign signed_op = ~func[0] || op_d[6'h08];
 
-
-assign ds_to_es_bus = {res_from_cp0,  //171:171
+wire inst_addr_ex;
+assign inst_addr_ex = ex_from_if;
+assign ds_to_es_bus = {inst_addr_ex,  //172:172
+                       res_from_cp0,  //171:171
                        //For exception
                        inst_eret   ,    //170:170
                        bd_from_if  ,  //169:169
@@ -263,7 +265,7 @@ assign ds_to_es_bus = {res_from_cp0,  //171:171
                        ds_ex       ,  //161:161
                        ds_excode   ,  //160:156
 
-                       /// 非对齐访�??
+                       /// 非对齐访�??
                        
                        res_from_mem_lwl,   //155:155
                        res_from_mem_lwr,   //154:154
@@ -351,17 +353,17 @@ assign inst_xori   = op_d[6'h0e];
 assign inst_sllv   = op_d[6'h00] & func_d[6'h04] & sa_d[5'h00];
 assign inst_srav   = op_d[6'h00] & func_d[6'h07] & sa_d[5'h00];
 assign inst_srlv   = op_d[6'h00] & func_d[6'h06] & sa_d[5'h00];
-//第五章数据搬�??
+//第五章数据搬�??
 assign inst_mfhi   = op_d[6'h00] & func_d[6'h10] & sa_d[5'h00] & rs_d[5'h00] & rt_d[5'h00];
 assign inst_mflo   = op_d[6'h00] & func_d[6'h12] & sa_d[5'h00] & rs_d[5'h00] & rt_d[5'h00];
 assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & sa_d[5'h00] & rt_d[5'h00] & rd_d[5'h00];
 assign inst_mtlo   = op_d[6'h00] & func_d[6'h13] & sa_d[5'h00] & rt_d[5'h00] & rd_d[5'h00];
-//第五章乘�??
+//第五章乘�??
 assign inst_mult   = op_d[6'h00] & func_d[6'h18] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_multu  = op_d[6'h00] & func_d[6'h19] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_div    = op_d[6'h00] & func_d[6'h1a] & sa_d[5'h00] & rd_d[5'h00];
 assign inst_divu   = op_d[6'h00] & func_d[6'h1b] & sa_d[5'h00] & rd_d[5'h00];
-//第六章转�??
+//第六章转�??
 assign inst_bgez   = op_d[6'h01] & rt_d[5'h01];
 assign inst_bgtz   = op_d[6'h07] & rt_d[5'h00];
 assign inst_blez   = op_d[6'h06] & rt_d[5'h00];
@@ -370,7 +372,7 @@ assign inst_j      = op_d[6'h02];
 assign inst_bltzal = op_d[6'h01] & rt_d[5'h10];
 assign inst_bgezal = op_d[6'h01] & rt_d[5'h11];
 assign inst_jalr   = op_d[6'h00] & rt_d[5'h00] & sa_d[5'h00] & func_d[6'h09];
-//第六章访�??
+//第六章访�??
 assign inst_lb    = op_d[6'h20];
 assign inst_lbu   = op_d[6'h24];
 assign inst_lh    = op_d[6'h21];

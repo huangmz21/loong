@@ -114,8 +114,9 @@ assign es_to_ms_addr = ds_to_es_addr_r;
 assign {es_f_ctrl1,   //3:2
         es_f_ctrl2   //1:0
         } = es_forward_ctrl;
-
-assign {es_cp0_op,        //171:171
+wire inst_addr_ex_es;
+assign {inst_addr_ex_es,  //172:172
+        es_cp0_op,        //171:171
         inst_eret ,       //170:170
         bd_from_if,       //169:169
         //For exception
@@ -125,7 +126,7 @@ assign {es_cp0_op,        //171:171
         ex_from_id     ,  //161:161
         excode_from_id ,  //160:156
         //end
-        /// �Ƕ���ô�??
+        /// �Ƕ���ô�??
                        
         es_res_from_mem_lwl,   //155:155
         es_res_from_mem_lwr,   //154:154
@@ -226,7 +227,7 @@ always @(*) begin
         es_ex     <= 1'b1;
         es_excode <= excode_from_id;
     end
-    // �����⣬�����˷Ƕ���ô�??////////////////////////////////////////////////////0
+    // �����⣬�����˷Ƕ���ô�??////////////////////////////////////////////////////0
     else if ((es_res_from_mem_w && es_alu_result[1:0]!=2'b00)||
                 (es_res_from_mem_h && es_alu_result[0]!=1'b0)) begin
         es_ex     <= 1'b1;
@@ -243,12 +244,13 @@ always @(*) begin
     end 
     else begin
         es_ex     <= 1'b0;
-        es_excode <= 5'hxx; // ! do need to be undetermined? 
+        es_excode <= 5'hxx;
     end
 end
 
 //�����ʱ���valid ��������
-assign es_to_ms_bus = {
+
+assign es_to_ms_bus = {inst_addr_ex_es   ,//125:125
                        inst_eret      ,   //124:124
                        bd_from_if     ,   //123:123
                        // For exception
@@ -421,7 +423,7 @@ assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
                          es_mem_we_swr ? data_sram_wdata_swr:
                          data_sram_wdata_t;
 
-//hazard unit  ����EX_MEM �� MEM_WB ֮�������ð��??
+//hazard unit  ����EX_MEM �� MEM_WB ֮�������ð��??
 wire es_src1_is_ex_mem ;
 wire es_src2_is_ex_mem ;
 wire es_src1_is_mem_wb ;
