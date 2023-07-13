@@ -137,14 +137,14 @@ assign rf_waddr = ws_dest;
 /********************************/
 assign rf_wdata = ws_res_from_cp0 ? cp0_rdata : ws_final_result;
 /********************************/
-assign es_forward_ws = ws_final_result;/////ÊÇ·ñ¸Ä³Érf_wdata???
+assign es_forward_ws = ws_final_result;//mtc0 doesn't need forwarding, so this is not rf_wdata
 
 // debug info generate
 assign debug_wb_pc       = ws_pc;
 assign debug_wb_rf_wen   = {4{rf_we}};
 assign debug_wb_rf_wnum  = ws_dest;
 //----------------0
-assign debug_wb_rf_wdata = rf_wdata;  //??????debug???????
+assign debug_wb_rf_wdata = rf_wdata;  //for debugging
 assign ws_res_from_cp0_h =ws_res_from_cp0 && ws_valid;
 assign ws_valid_h =ws_valid;
 endmodule

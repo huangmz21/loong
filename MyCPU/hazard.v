@@ -4,7 +4,7 @@ module hazard(
 
 
     //decode_stage beq
-    input ifbranch,            //�Ƿ���ת
+    input ifbranch,            //send back to if, whether this is a branch instruction
     input [4:0] rf_raddr1,       //ʹ�õ�Դ�Ĵ�����,IF�׶�
     input [4:0] rf_raddr2, 
     input mem_we,          
