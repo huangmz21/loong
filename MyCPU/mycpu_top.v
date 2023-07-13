@@ -77,6 +77,8 @@ wire ex_from_ms_to_es;
 wire eret_from_ws;
 wire [31:0 ]cp0_epc;
 
+wire has_int;
+
 // IF stage
 if_stage if_stage(
     .clk            (clk            ),
@@ -227,7 +229,9 @@ wb_stage wb_stage(
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
     .ws_eret(eret_from_ws),
     .ws_res_from_cp0_h(ws_res_from_cp0_h),
-    .ws_valid_h(ws_valid_h)
+    .ws_valid_h(ws_valid_h),
+
+    .has_int(has_int)
 );
 
 
@@ -270,7 +274,7 @@ hazard hazard (
     .ws_valid_h(ws_valid_h),
 
     //stall and flush
-    //00=normalï¿??01=stallï¿??10=flush
+    //00=normalï¿½??01=stallï¿½??10=flush
     .stallF(stallF),
     .stallD(stallD),
     //.stallF(stallF),
@@ -287,7 +291,8 @@ cp0 cp0(
     .ext_int_in(ext_int_in),
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
     .rdata(cp0_rdata),
-    .epc(cp0_epc)
+    .epc(cp0_epc),
+    .has_int(has_int)
 );
 
 endmodule
