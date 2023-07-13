@@ -56,8 +56,10 @@ wire        ms_ex;
 wire        mtc0_we_from_es;
 wire        mtc0_we_ms;
 wire [31:0] ms_rt_value;
+wire        inst_addr_ex_ms;
 assign mtc0_we_ms = mtc0_we_from_es;
-assign {inst_eret ,
+assign {inst_addr_ex_ms,
+        inst_eret ,
         bd_from_if,
         mtc0_we_from_es,
         ms_cp0_addr    ,
@@ -86,7 +88,8 @@ assign ms_excode = excode_from_es;
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
-assign ms_to_ws_bus = {ms_rt_value,      //148:117
+assign ms_to_ws_bus = {inst_addr_ex_ms,  //149:149
+                       ms_rt_value,      //148:117
                        inst_eret ,       //116:116
                        bd_from_if,       //115:115
                        mtc0_we_ms    ,   //114:114
