@@ -28,7 +28,8 @@ module wb_stage(
     output ws_valid_h,
 
     output        ws_ex_forward , //Used as a signal of flushing the pipeline
-    output        ws_eret
+    output        ws_eret,
+    input         has_int
 );
 
  (* keep = "true" *) reg         ws_valid;
@@ -70,9 +71,9 @@ assign {inst_addr_ex_ws,
        } = ms_to_ws_bus_r;
 
 wire   ws_ex;
-assign ws_excode = excode_from_ms;
-assign ws_ex     = ex_from_ms;
-assign ws_ex_forward = ex_from_ms || eret_flush;
+assign ws_excode = has_int ? 5'b00 : excode_from_ms;
+assign ws_ex     = has_int ? 1'b1 : ex_from_ms;
+assign ws_ex_forward = ws_ex || eret_flush;
 
 assign ws_eret = eret_flush;
 

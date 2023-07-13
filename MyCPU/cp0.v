@@ -10,8 +10,8 @@ module cp0(
 
     // from cp0_register to WB_stage, used in MTF0(read)
     output [31:0] rdata,
-    output [31:0] epc
-
+    output [31:0] epc,
+    output        has_int
 );
 
 wire        wb_ex;        // exception sign passed to WB_stage
@@ -185,5 +185,7 @@ always @(posedge clk)begin
     else if (mtc0_we && c0_waddr==`CR_EPC)
         c0_epc <= c0_wdata;
 end    
+
+assign has_int = ((c0_cause_ip[7:0] & c0_status_im[7:0]) != 8'h00) && (c0_status_ie == 1'b1) && (c0_status_exl == 1'b0);
 
 endmodule
