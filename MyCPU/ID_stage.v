@@ -507,7 +507,8 @@ assign rs_value = ds_f_ctrl1?ds_forward_bus:rf_rdata1;
 assign rt_value = ds_f_ctrl2?ds_forward_bus:rf_rdata2;
 
 assign rs_eq_rt = (rs_value == rt_value);
-assign ifbranch =(inst_beq || inst_bne || inst_bgez || inst_bgezal || inst_bgtz || inst_blez || inst_bltz || inst_bltzal) ;
+assign ifbranch =(inst_beq || inst_bne || inst_bgez || inst_bgezal || inst_bgtz || inst_blez || inst_bltz || inst_bltzal
+                 || inst_jal || inst_jr || inst_j || inst_jalr) ;
 //////1
 assign rs_eq_0  = (rs_value ==0);
 assign rs_gt_0  = (~rs_value[31] && ~rs_eq_0);

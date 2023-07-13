@@ -1,4 +1,4 @@
-module hazard(
+module  hazard(
     //if_stage
     input fs_valid_h,
 
