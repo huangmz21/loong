@@ -2,21 +2,22 @@ module alu(
   input  [11:0] alu_op,
   input  [31:0] alu_src1,
   input  [31:0] alu_src2,
-  output [31:0] alu_result
+  output [31:0] alu_result,
+  output        overflow
 );
 
-wire op_add;   //¼Ó·¨²Ù×÷
-wire op_sub;   //¼õ·¨²Ù×÷
-wire op_slt;   //ÓĞ·ûºÅ±È½Ï£¬Ğ¡ÓÚÖÃÎ»
-wire op_sltu;  //ÎŞ·ûºÅ±È½Ï£¬Ğ¡ÓÚÖÃÎ»
-wire op_and;   //°´Î»Óë
-wire op_nor;   //°´Î»»ò·Ç
-wire op_or;    //°´Î»»ò
-wire op_xor;   //°´Î»Òì»ò
-wire op_sll;   //Âß¼­×óÒÆ
-wire op_srl;   //Âß¼­ÓÒÒÆ
-wire op_sra;   //ËãÊõÓÒÒÆ
-wire op_lui;   //Á¢¼´ÊıÖÃÓÚ¸ß°ë²¿·Ö
+wire op_add;   //åŠ æ³•æ“ä½œ
+wire op_sub;   //å‡æ³•æ“ä½œ
+wire op_slt;   //æœ‰ç¬¦å·æ¯”è¾ƒï¼Œå°äºç½®ä½
+wire op_sltu;  //æ— ç¬¦å·æ¯”è¾ƒï¼Œå°äºç½®ä½
+wire op_and;   //æŒ‰ä½ä¸
+wire op_nor;   //æŒ‰ä½æˆ–é
+wire op_or;    //æŒ‰ä½æˆ–
+wire op_xor;   //æŒ‰ä½å¼‚æˆ–
+wire op_sll;   //é€»è¾‘å·¦ç§»
+wire op_srl;   //é€»è¾‘å³ç§»
+wire op_sra;   //ç®—æœ¯å³ç§»
+wire op_lui;   //ç«‹å³æ•°ç½®äºé«˜åŠéƒ¨åˆ†
 
 // control code decomposition
 assign op_add  = alu_op[ 0];
@@ -45,27 +46,25 @@ wire [63:0] sr64_result;
 wire [31:0] sr_result; 
 
 
-//////1 32-bit adderé­”æ”¹
-wire [30:0] adder_a_2;
-wire        adder_a_1;
-wire [30:0] adder_b_2;
-wire        adder_b_1;
+// 32-bit adder(our version)
+wire [30:0] adder_a_otherbit;
+wire        adder_a_signbit;
+wire [30:0] adder_b_otherbit;
+wire        adder_b_signbit;
 wire        adder_cin;
 wire [31:0] adder_result;
-wire        adder_result_t;
-wire        adder_result_1;
-wire [30:0] adder_result_2;
+wire        adder_result_msb_carrybit;
+wire        adder_result_signbit;
+wire [30:0] adder_result_otherbit;
 wire        adder_cout;
-wire        overflow;
 
-assign {adder_a_1, adder_a_2}           = alu_src1;
-assign {adder_b_1, adder_b_2}           = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
-assign adder_cin                        = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_result_t, adder_result_2} = adder_a_2 + adder_b_2 + adder_cin;
-assign {adder_cout, adder_result_1}     = adder_a_1+adder_b_1+adder_result_t;
-assign overflow                         = adder_cout^adder_result_t;
-assign adder_result                     = {adder_result_1, adder_result_2};
-//////0
+assign {adder_a_signbit, adder_a_otherbit}                = alu_src1;
+assign {adder_b_signbit, adder_b_otherbit}                = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
+assign adder_cin                                          = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign {adder_result_msb_carrybit, adder_result_otherbit} = adder_a_otherbit + adder_b_otherbit + adder_cin;
+assign {adder_cout, adder_result_signbit}                 = adder_a_signbit + adder_b_signbit + adder_result_msb_carrybit;
+assign adder_result                                       = {adder_result_signbit, adder_result_otherbit};
+assign overflow                                           = adder_cout ^ adder_result_msb_carrybit;
 
 // ADD, SUB result
 assign add_sub_result = adder_result;
