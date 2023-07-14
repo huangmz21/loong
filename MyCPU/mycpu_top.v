@@ -1,7 +1,8 @@
-`include "mycpu.h"  //bug4
+`include "mycpu.h"
 module mycpu_top(
     input         clk,
     input         resetn,
+    input  [ 5:0] ext_int,
     // inst sram interface
     output        inst_sram_en,
     output [ 3:0] inst_sram_wen,
@@ -158,11 +159,11 @@ exe_stage exe_stage(
 
     .ex_from_ws(ex_from_ws)          ,
     .ex_from_ms(ex_from_ms_to_es)    ,
+
     //forward datapath
     .es_forward_ms  (es_forward_ms  ),
     .es_forward_ws  (es_forward_ws  ),
     .ds_forward_es  (ds_forward_es  ),
-    //.mem_result(ms_to_ws_bus[63:32]),
     //forward control
     .es_forward_ctrl(es_forward_ctrl),
     .es_mem_we_tohazard(es_mem_we),
@@ -174,7 +175,6 @@ exe_stage exe_stage(
     .es_to_ms_addr(es_to_ms_addr),
     .es_stop(div_stop),
     .es_res_from_cp0_h(es_res_from_cp0_h)
-
 
 );
 // MEM stage
@@ -198,8 +198,7 @@ mem_stage mem_stage(
     .ms_res_from_mem(ms_res_from_mem),
     .ds_forward_ms(ds_forward_ms),
     .es_forward_ms(es_forward_ms)   ,
-    //.es_to_ms_addr(es_to_ms_addr),
-    //.ms_to_ws_addr(ms_to_ws_addr)
+
     .ex_to_es(ex_from_ms_to_es),
     //hazard
     .ms_res_from_cp0_h(ms_res_from_cp0_h),
@@ -228,14 +227,17 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
 
-    .ws_ex_forward(ex_from_ws)                   ,
+    .ws_ex_forward(ex_from_ws),
 
-    .cp0_rdata(cp0_rdata)                ,
+    //contact to cp0 
+    .cp0_rdata(cp0_rdata),
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
+
     .ws_eret(eret_from_ws),
     .ws_res_from_cp0_h(ws_res_from_cp0_h),
-    .ws_valid_h(ws_valid_h),
 
+    .ws_valid_h(ws_valid_h),
+    
     .has_int(has_int)
 );
 
@@ -244,15 +246,14 @@ hazard hazard (
     //ifstage
     .fs_valid_h(fs_valid_h),
 
-       //decode_stage beq
-    .ifbranch(ifbranch),            //是否跳转
+    //decode_stage beq
+    .ifbranch(ifbranch),                  //是否跳转
     .rf_raddr1(ds_to_es_addr[9:5]),       //使用的源寄存器号,IF阶段
     .rf_raddr2(ds_to_es_addr[4:0]), 
     .ds_forward_ctrl(ds_forward_ctrl),
     .ds_valid_h(ds_valid_h),
     .mem_we(ds_to_es_bus[117]),
     .ds_res_from_cp0_h(ds_res_from_cp0_h),
-
 
     //ex_stage alu
     .es_rf_raddr1(es_to_ms_addr[9:5]),
@@ -279,21 +280,16 @@ hazard hazard (
     .ws_valid_h(ws_valid_h),
 
     //stall and flush
-    //00=normal�??01=stall�??10=flush
     .stallF(stallF),
     .stallD(stallD),
-    //.stallF(stallF),
     .stallE(stallE),
     .div_stop(div_stop)
 );
-//-------------------------------temporary
-wire [5:0] ext_int_in;
-assign ext_int_in = 6'b0;
 
 cp0 cp0(
     .clk(clk),
     .reset(reset),
-    .ext_int_in(ext_int_in),
+    .ext_int_in(ext_int),
     .wb_to_cp0_register_bus(wb_to_cp0_register_bus),
     .rdata(cp0_rdata),
     .epc(cp0_epc),
