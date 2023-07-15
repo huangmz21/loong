@@ -79,7 +79,7 @@ always @(posedge clk) begin
     end
 
     if (reset) begin
-        fs_pc <= 32'hbfbf_fffc;   //trick: to make nextpc be 0xbfc00000 during reset 
+        fs_pc <= 32'hbfbf_fffc;  //trick: to make nextpc be 0xbfc00000 during reset 
     end
     else if (ex_from_ws && ~eret_from_ws) begin
         fs_pc <= 32'hbfc0_037c;  //jump to the exception handler
