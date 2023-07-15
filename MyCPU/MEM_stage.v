@@ -21,11 +21,9 @@ module mem_stage(
     output ms_res_from_mem,
     output ms_res_from_cp0_h,
     output ms_valid_h,
-    //input  [2*5              -1:0] es_to_ms_addr ,
-    //output [2*5              -1:0] ms_to_ws_addr 
 
-    output          ex_to_es                    ,
-    input           ex_from_ws        //Need to flush
+    output                         ex_to_es       ,
+    input                          ex_from_ws        //flush signal
 );
 
  (* keep = "true" *) reg         ms_valid;
@@ -37,7 +35,6 @@ wire        ex_from_es;
 wire [4:0]  excode_from_es;
 wire        ms_res_from_cp0;
 
-//////1
 wire        ms_res_from_mem_w;
 wire        ms_res_from_mem_h;
 wire        ms_res_from_mem_b;
@@ -45,7 +42,7 @@ wire        ms_res_from_mem_sign;
 wire        ms_res_from_mem_lwl;
 wire        ms_res_from_mem_lwr;
 wire [1:0]  ms_whb_mux;
-//////0
+
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
@@ -65,21 +62,20 @@ assign {inst_addr_ex_ms,
         ms_cp0_addr    ,
         ex_from_es     ,
         excode_from_es ,
-        ms_res_from_cp0,  // mfc0: load the value of CP0[rd,sel] to R[rt]
+        ms_res_from_cp0,       // mfc0: load the value of CP0[rd,sel] to R[rt]
         ms_res_from_mem_lwl,   //109:109
         ms_res_from_mem_lwr,   //108:108
-        ms_rt_value,        //107:76
-        ms_res_from_mem_w,  //75:75
-        ms_res_from_mem_h,  //74:74
-        ms_res_from_mem_b,  //73:73
-        ms_res_from_mem_sign,//72:72
-        ms_whb_mux,//71:70
-        ms_gr_we       ,  //69:69
-        ms_dest        ,  //68:64
-        ms_alu_result  ,  //63:32
-        ms_pc             //31:0
+        ms_rt_value,           //107:76
+        ms_res_from_mem_w,     //75:75
+        ms_res_from_mem_h,     //74:74
+        ms_res_from_mem_b,     //73:73
+        ms_res_from_mem_sign,  //72:72
+        ms_whb_mux,            //71:70
+        ms_gr_we       ,       //69:69
+        ms_dest        ,       //68:64
+        ms_alu_result  ,       //63:32
+        ms_pc                  //31:0
        } = es_to_ms_bus_r;
-
 
 assign ms_ex = ex_from_es;
 assign ex_to_es = ms_ex || inst_eret; //eret also breaks former insts
@@ -99,7 +95,6 @@ assign ms_to_ws_bus = {inst_addr_ex_ms,  //149:149
                        ms_ex,            //75:75
                        ms_excode,        //74:70
 
-                       //////0
                        ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
                        ms_final_result,  //63:32
