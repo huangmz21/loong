@@ -1,6 +1,7 @@
 module  hazard(
     //if_stage
     input fs_valid_h,
+    output  reg br_stall,
 
 
     //decode_stage beq
@@ -86,23 +87,27 @@ always @(*) begin
         sF=2'b00;
         sD=2'b01;
         sE=2'b00;
+        br_stall = 1'b1 && ds_valid_h;
     end
     else if(div_stop)
     begin
         sF=2'b00;
         sD=2'b00;
         sE=2'b01;
+        br_stall = 1'b0 && ds_valid_h;
     end
     else if(ifmfc0)
     begin
         sF=2'b01;
         sD=2'b00;
         sE=2'b00;
+        br_stall = 1'b0 && ds_valid_h;
     end
     else begin
         sF=2'b00;
         sD=2'b00;
         sE=2'b00;
+        br_stall = 1'b0 && ds_valid_h;
     end
 end
 

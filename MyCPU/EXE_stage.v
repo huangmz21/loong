@@ -253,11 +253,9 @@ assign es_to_ms_bus = {inst_addr_ex_es   ,//125:125
                        es_pc                  //31:0
                       };
 
-assign es_ready_go    = 1'b1;
-assign es_allowin     = (stallE==2'b01)?1'b0:
-                        (stallE==2'b10)?1'b1:(!es_valid || es_ready_go && ms_allowin);
-assign es_to_ms_valid = (stallE==2'b01)?1'b0:
-                        (stallE==2'b10)?1'b0:(es_valid && es_ready_go);
+assign es_ready_go    = (stallE==2'b01)?1'b0:1'b1;
+assign es_allowin     = (!es_valid || es_ready_go && ms_allowin);
+assign es_to_ms_valid = (es_valid && es_ready_go);
 always @(posedge clk) begin
     if (reset || ex_from_ws) begin
         es_valid <= 1'b0;

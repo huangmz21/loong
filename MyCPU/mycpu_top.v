@@ -69,6 +69,7 @@ wire es_res_from_cp0_h;
 wire ms_res_from_cp0_h;
 wire ws_res_from_cp0_h;
 //////0
+wire br_stall;
 wire [1:0] stallF;
 wire [1:0] stallD;
 wire [1:0] stallE;
@@ -90,6 +91,7 @@ if_stage if_stage(
     .ds_allowin     (ds_allowin     ),
     //brbus
     .br_bus         (br_bus         ),
+    .br_stall       (br_stall       ),
     //outputs
     .fs_to_ds_valid (fs_to_ds_valid ),
     .fs_to_ds_bus   (fs_to_ds_bus   ),
@@ -245,6 +247,7 @@ wb_stage wb_stage(
 hazard hazard (
     //ifstage
     .fs_valid_h(fs_valid_h),
+    .br_stall(br_stall),
 
     //decode_stage beq
     .ifbranch(ifbranch),                  //是否跳转

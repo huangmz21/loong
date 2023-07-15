@@ -7,6 +7,7 @@ module if_stage(
     input                          ds_allowin     ,
     //branchbus
     input  [`BR_BUS_WD       -1:0] br_bus         ,
+    input  br_stall                               ,
     //to ds
     output                         fs_to_ds_valid ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,
@@ -39,7 +40,6 @@ assign {br_taken,br_target} = br_bus;
 
 wire [31:0] fs_inst;
 reg  [31:0] fs_pc;
-
 wire        fs_ex;
 assign fs_ex = (fs_pc[1:0]==2'b00) ? 0 : 1;
 
@@ -53,18 +53,19 @@ assign fs_to_ds_bus = {bd_to_ds,  //65:65
                        };
 
 // pre-IF stage
-assign to_fs_valid  = ~reset;
+wire prfs_ready_go;
+assign prfs_ready_go = !br_stall;
+assign to_fs_valid  = ~reset && prfs_ready_go;
 assign seq_pc       = fs_pc + 3'h4;
 assign nextpc       = br_taken ? br_target : seq_pc; 
 
 // IF stage
-assign fs_ready_go    = 1'b1;
+assign fs_ready_go    = (stallF==2'b01)?1'b0:1'b1;
 
-assign fs_allowin     = (stallF==2'b01)?1'b0:
-                        (stallF==2'b10)?1'b1:(!fs_valid || fs_ready_go && ds_allowin);
 
-assign fs_to_ds_valid = (stallF==2'b01)?1'b0:
-                        (stallF==2'b10)?1'b0:(fs_valid && fs_ready_go);
+assign fs_allowin     = (!fs_valid || fs_ready_go && ds_allowin);
+
+assign fs_to_ds_valid = (fs_valid && fs_ready_go);
 
 always @(posedge clk) begin
     if (reset) begin
@@ -78,10 +79,10 @@ always @(posedge clk) begin
     end
 
     if (reset) begin
-        fs_pc <= 32'hbfbf_fffc;   //trick: to make nextpc be 0xbfc00000 during reset 
+        fs_pc <= 32'hbfbf_fffc;  //trick: to make nextpc be 0xbfc00000 during reset 
     end
     else if (ex_from_ws && ~eret_from_ws) begin
-        fs_pc <= 32'hbfc0_037c;   //jump to the exception handler
+        fs_pc <= 32'hbfc0_037c;  //jump to the exception handler
     end
     else if (eret_from_ws) begin
         fs_pc <= cp0_epc - 32'h4; //exception handle finished, back to the original inst
@@ -90,7 +91,6 @@ always @(posedge clk) begin
         fs_pc <= nextpc;
     end
 end
-
 //virtual - real address
 wire i_kuseg  ;
 wire i_kseg0  ;
@@ -108,10 +108,9 @@ assign inst_sram_addr[31:29] =
                        i_kuseg ? {(!nextpc[30]) ? 2'b01 : 2'b10, nextpc[29]} :
           (i_kseg0 || i_kseg1) ? 3'b000 :
                                  nextpc[31:29];
-
 assign inst_sram_en    = to_fs_valid && fs_allowin;
 assign inst_sram_wen   = 4'h0;
-assign inst_sram_addr  = nextpc;
+//assign inst_sram_addr  = nextpc;
 assign inst_sram_wdata = 32'b0;
 
 assign fs_inst         = inst_sram_rdata;

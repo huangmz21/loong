@@ -41,7 +41,6 @@ reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
-
 wire        bd_from_fs;
 wire        ex_from_fs;     //Here we only need one-bit-wide excode, as only one exception type can happen during IF stage
 
@@ -62,7 +61,6 @@ wire        br_taken;
 wire [31:0] br_target;
 
 wire [11:0] alu_op;
-
 wire [3:0]  ds_mudi;
 wire [1:0]  ds_hl_we;
 wire        dst_is_hi;
@@ -209,8 +207,6 @@ reg [ 4:0] ds_excode    ;
 wire       inst_syscall ;
 wire       inst_break   ;
 wire       inst_undef   ;
-
-
 always @(*) begin
     if (ex_from_fs) begin
         ds_ex     <= 1'b1;
@@ -289,12 +285,10 @@ assign ds_to_es_bus = {inst_addr_ex,  //172:172
                        ds_pc          //31 :0
                       };
 
-assign ds_ready_go    = 1'b1;
-assign ds_allowin     = (stallD==2'b01)?1'b0:
-                        (stallD==2'b10)?1'b1:(!ds_valid || ds_ready_go && es_allowin);
+assign ds_ready_go    = (stallD==2'b01)?1'b0:1'b1;
+assign ds_allowin     = (!ds_valid || ds_ready_go && es_allowin);
 
-assign ds_to_es_valid = (stallD==2'b01)?1'b0:
-                        (stallD==2'b10)?1'b0:(ds_valid && ds_ready_go);
+assign ds_to_es_valid = (ds_valid && ds_ready_go);
 //这里是flush操作
 always @(posedge clk) begin
     if (reset || ex_from_ws) begin
@@ -399,7 +393,6 @@ assign inst_mtc0    = op_d[6'h10] & rs_d[5'h04] & sa_d[5'h00] & (func_d[6'h00] |
 assign inst_eret   = (ds_inst == 32'h4200_0018);
 assign inst_undef = ~((|alu_op)|(|ds_mudi)| ifbranch | inst_mfc0 | inst_mtc0 | inst_mfhi | inst_mflo | inst_mthi | inst_mtlo
                         | inst_syscall | inst_break | inst_nop | inst_eret);
-
 //End
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal | inst_add | inst_addi
                    | inst_jalr | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_sb | inst_sh | inst_bgezal | inst_bltzal
@@ -426,7 +419,6 @@ assign ds_hl_we[0]  = (inst_mult | inst_multu | inst_div | inst_divu | inst_mtlo
                         1'b0;
 assign dst_is_hi    = inst_mthi;
 assign dst_is_lo    = inst_mtlo;
-
 // result origin control
 assign res_from_hi       = inst_mfhi;
 assign res_from_lo       = inst_mflo;
@@ -446,7 +438,6 @@ assign src2_is_simm   = inst_addiu | inst_lui | inst_lw | inst_sw | inst_addi | 
                         | inst_lh | inst_lhu | inst_sb | inst_sh | inst_lwl |inst_lwr | inst_swl |inst_swr;
 assign src2_is_usimm  = inst_andi | inst_ori | inst_xori;
 assign src2_is_8      = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
-
 // destination control
 assign dst_is_r31     = inst_jal | inst_bgezal | inst_bltzal;
 assign dst_is_rt      = inst_addiu | inst_lui | inst_lw | inst_addi | inst_slti | inst_sltiu | inst_andi | inst_ori | inst_xori 
