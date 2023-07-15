@@ -41,6 +41,10 @@ reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8ef3b35e1422ce83f8b4aeec643939c8ba20bfd7
 wire        bd_from_fs;
 wire        ex_from_fs;     //Here we only need one-bit-wide excode, as only one exception type can happen during IF stage
 
@@ -61,6 +65,10 @@ wire        br_taken;
 wire [31:0] br_target;
 
 wire [11:0] alu_op;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8ef3b35e1422ce83f8b4aeec643939c8ba20bfd7
 wire [3:0]  ds_mudi;
 wire [1:0]  ds_hl_we;
 wire        dst_is_hi;
@@ -207,6 +215,8 @@ reg [ 4:0] ds_excode    ;
 wire       inst_syscall ;
 wire       inst_break   ;
 wire       inst_undef   ;
+
+
 always @(*) begin
     if (ex_from_fs) begin
         ds_ex     <= 1'b1;
@@ -393,6 +403,10 @@ assign inst_mtc0    = op_d[6'h10] & rs_d[5'h04] & sa_d[5'h00] & (func_d[6'h00] |
 assign inst_eret   = (ds_inst == 32'h4200_0018);
 assign inst_undef = ~((|alu_op)|(|ds_mudi)| ifbranch | inst_mfc0 | inst_mtc0 | inst_mfhi | inst_mflo | inst_mthi | inst_mtlo
                         | inst_syscall | inst_break | inst_nop | inst_eret);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8ef3b35e1422ce83f8b4aeec643939c8ba20bfd7
 //End
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal | inst_add | inst_addi
                    | inst_jalr | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_sb | inst_sh | inst_bgezal | inst_bltzal
