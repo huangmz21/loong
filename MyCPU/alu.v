@@ -2,21 +2,22 @@ module alu(
   input  [11:0] alu_op,
   input  [31:0] alu_src1,
   input  [31:0] alu_src2,
-  output [31:0] alu_result
+  output [31:0] alu_result,
+  output        overflow
 );
 
-wire op_add;   //�ӷ�����
-wire op_sub;   //��������
-wire op_slt;   //�з��űȽϣ�С����λ
-wire op_sltu;  //�޷��űȽϣ�С����λ
-wire op_and;   //��λ��
-wire op_nor;   //��λ���
-wire op_or;    //��λ��
-wire op_xor;   //��λ���
-wire op_sll;   //�߼�����
-wire op_srl;   //�߼�����
-wire op_sra;   //��������
-wire op_lui;   //���������ڸ߰벿��
+wire op_add;   //加法操作
+wire op_sub;   //减法操作
+wire op_slt;   //有符号比较，小于置位
+wire op_sltu;  //无符号比较，小于置位
+wire op_and;   //按位与
+wire op_nor;   //按位或非
+wire op_or;    //按位或
+wire op_xor;   //按位异或
+wire op_sll;   //逻辑左移
+wire op_srl;   //逻辑右移
+wire op_sra;   //算术右移
+wire op_lui;   //立即数置于高半部分
 
 // control code decomposition
 assign op_add  = alu_op[ 0];
@@ -45,17 +46,25 @@ wire [63:0] sr64_result;
 wire [31:0] sr_result; 
 
 
-// 32-bit adder
-wire [31:0] adder_a;
-wire [31:0] adder_b;
+// 32-bit adder(our version)
+wire [30:0] adder_a_otherbit;
+wire        adder_a_signbit;
+wire [30:0] adder_b_otherbit;
+wire        adder_b_signbit;
 wire        adder_cin;
 wire [31:0] adder_result;
+wire        adder_result_msb_carrybit;
+wire        adder_result_signbit;
+wire [30:0] adder_result_otherbit;
 wire        adder_cout;
 
-assign adder_a   = alu_src1;
-assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
+assign {adder_a_signbit, adder_a_otherbit}                = alu_src1;
+assign {adder_b_signbit, adder_b_otherbit}                = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
+assign adder_cin                                          = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign {adder_result_msb_carrybit, adder_result_otherbit} = adder_a_otherbit + adder_b_otherbit + adder_cin;
+assign {adder_cout, adder_result_signbit}                 = adder_a_signbit + adder_b_signbit + adder_result_msb_carrybit;
+assign adder_result                                       = {adder_result_signbit, adder_result_otherbit};
+assign overflow                                           = adder_cout ^ adder_result_msb_carrybit;
 
 // ADD, SUB result
 assign add_sub_result = adder_result;
@@ -71,7 +80,7 @@ assign sltu_result[0]    = ~adder_cout;
 
 // bitwise operation
 assign and_result = alu_src1 & alu_src2;
-assign or_result  = alu_src1 | alu_src2 ;
+assign or_result  = alu_src1 | alu_src2;
 assign nor_result = ~or_result;
 assign xor_result = alu_src1 ^ alu_src2;
 assign lui_result = {alu_src2[15:0], 16'b0};
