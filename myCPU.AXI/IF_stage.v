@@ -261,49 +261,12 @@ always @(posedge clk) begin
     end
 end
 
-// always @(posedge clk) begin
-// end
-//virtual - real address
-wire i_kuseg  ;
-wire i_kseg0  ;
-wire i_kseg1  ;
-wire i_kseg2  ;
-wire i_kseg3  ;
-assign i_kuseg   = ~nextpc[31];
-assign i_kseg0   = nextpc[31:29]==3'b100;
-assign i_kseg1   = nextpc[31:29]==3'b101;
-assign i_kseg2   = nextpc[31:29]==3'b110;
-assign i_kseg3   = nextpc[31:29]==3'b111;
-
-assign inst_sram_addr[28:0]  = nextpc[28:0];
-assign inst_sram_addr[31:29] =   
-                       i_kuseg ? {(!nextpc[30]) ? 2'b01 : 2'b10, nextpc[29]} :
-          (i_kseg0 || i_kseg1) ? 3'b000 :
-                                 nextpc[31:29];
-          
-//assign inst_sram_en    = ~(prfs_ready_go && ~fs_ready_go) && ~br_stall_true && ~prfs_to_fs_inst_valid;
-
-// reg crazy;
-// always @(posedge clk) begin
-//     if(reset) begin
-//         crazy<=1'b1;
-//     end
-//     if(inst_sram_data_ok) begin
-//         crazy<=1'b1;
-//     end
-//     else if(inst_sram_addr_ok) begin
-//         crazy<=1'b0;
-//     end
-// end
-// assign inst_sram_en    = ~br_stall_true && ~prfs_to_fs_inst_valid && crazy;
-//assign inst_sram_en    = ~br_stall_true && ~prfs_to_fs_inst_valid;
-//assign inst_sram_en    = ~br_stall_true && ~prfs_to_fs_inst_valid && ~inst_req_not_allow;
+assign inst_sram_addr  = nextpc;
 
 assign inst_sram_en    = ~br_stall_true && ~inst_req_not_allow && ~reset;
 assign inst_sram_wen   = 4'h0;
 assign inst_sram_wr    = |inst_sram_wen;
 assign inst_sram_size  = 2'b10;
-//assign inst_sram_addr  = nextpc;
 assign inst_sram_wdata = 32'b0;
 
 assign fs_inst         = fs_to_ds_inst_valid     ? fs_to_ds_inst_r   :

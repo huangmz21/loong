@@ -78,14 +78,38 @@ always @(posedge clk_g) begin
         wdata_request <= wdata;
     end
 end
-    
+
+//µØÖ·Ó³Éä
+wire [19:0] phys_tag;
+
+wire kuseg  ;
+wire kseg0  ;
+wire kseg1  ;
+wire kseg2  ;
+wire kseg3  ;
+assign kuseg   = ~tag_request[31];
+assign kseg0   = tag_request[31:29]==3'b100;
+assign kseg1   = tag_request[31:29]==3'b101;
+assign kseg2   = tag_request[31:29]==3'b110;
+assign kseg3   = tag_request[31:29]==3'b111;
+
+assign phys_tag[16:0]  = tag_request[16:0];
+assign phys_tag[19:17] =   
+                       kuseg ? {(!tag_request[18]) ? 2'b01 : 2'b10, tag_request[17]} :
+          (kseg0 || kseg1) ? 3'b000 :
+                                 tag_request[19:17];
+
+
 //Tag Compare (not consider uncache)
 wire Way0_hit;
 wire Way1_hit;
 wire cache_hit;
-assign Way0_hit = Way0_V && (Way0_Tag == tag_request);
-assign Way1_hit = Way1_V && (Way1_Tag == tag_request);
+assign Way0_hit = Way0_V && (Way0_Tag == phys_tag);
+assign Way1_hit = Way1_V && (Way1_Tag == phys_tag);
 assign cache_hit = (Way0_hit || Way1_hit) && (main_cur_state == `LOOKUP);
+
+wire uncache;
+assign uncache = kseg1;
 
 //Data Select
 wire [31:0] Way0_load_word;
@@ -134,7 +158,7 @@ always @(posedge clk_g) begin
                     (Way1_V==1'b0)?1'b1:
                     lfsr_reg;
     else if(lookup_to_miss) begin
-        miss_addr<={tag_request,index_request,offset_request};
+        miss_addr<={phys_tag,index_request,offset_request};
         miss_op <= op_request;
         
     end
@@ -216,7 +240,7 @@ assign Way0_TagV_addra = (main_next_state == `LOOKUP) ? index:
                          (main_next_state == `REPLACE) ? index_replace_0:
                          (main_next_state == `REFILL) ? index_refill_0:
                          8'b0;
-assign Way0_TagV_dina = (main_next_state == `REFILL) ? {3'b0,tag_request,1'b1}:
+assign Way0_TagV_dina = (main_next_state == `REFILL) ? {3'b0,phys_tag,1'b1}:
                         24'b0;
 assign Way0_TagV_ena = (main_next_state == `LOOKUP)? 1'b1:
                        (main_next_state == `REPLACE && miss_way == 1'b0)? 1'b1:
@@ -253,7 +277,7 @@ assign Way1_TagV_addra = (main_next_state == `LOOKUP) ? index:
                          (main_next_state == `REPLACE) ? index_replace_1:
                          (main_next_state == `REFILL) ? index_refill_1:
                          8'b0;
-assign Way1_TagV_dina = (main_next_state == `REFILL) ? {3'b0,tag_request,1'b1}:
+assign Way1_TagV_dina = (main_next_state == `REFILL) ? {3'b0,phys_tag,1'b1}:
                         24'b0;
 assign Way1_TagV_ena = (main_next_state == `LOOKUP)? 1'b1:
                        (main_next_state == `REPLACE && miss_way == 1'b1)? 1'b1:
@@ -801,7 +825,7 @@ assign data_ok = (main_cur_state == `LOOKUP && cache_hit)
                  || (main_cur_state == `REFILL && ret_valid == 1'b1 && miss_read_num[1:0] == offset_request [3:2]);
 assign rd_addr = miss_addr;
 assign wr_addr = cache_hit ?{tag_write,index_write,offset_write[3:2],2'b0}:
-                            {tag_request,index_request,offset_request[3:2],2'b0};
+                            {phys_tag,index_request,offset_request[3:2],2'b0};
 
 assign rd_req = (main_cur_state==`REPLACE) ? 1'b1 :1'b0;
 

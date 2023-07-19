@@ -419,25 +419,13 @@ assign data_sram_size  = (es_res_from_mem_w || es_mem_we_w || ((es_res_from_mem_
                          2'b00;
 
 //virtual - real address
-wire [31:0] dmem_vaddr;
-wire d_kuseg  ;
-wire d_kseg0  ;
-wire d_kseg1  ;
-wire d_kseg2  ;
-wire d_kseg3  ;
+
 assign dmem_vaddr = (es_res_from_mem_lwl || es_mem_we_swl) ? {es_alu_result[31:2],2'b00} :
                          es_alu_result;
-assign d_kuseg   = ~dmem_vaddr[31];
-assign d_kseg0   = dmem_vaddr[31:29]==3'b100;
-assign d_kseg1   = dmem_vaddr[31:29]==3'b101;
-assign d_kseg2   = dmem_vaddr[31:29]==3'b110;
-assign d_kseg3   = dmem_vaddr[31:29]==3'b111;
 
-assign data_sram_addr[28:0]  = dmem_vaddr[28:0];
-assign data_sram_addr[31:29] =   
-                       d_kuseg ? {(!dmem_vaddr[30]) ? 2'b01 : 2'b10, dmem_vaddr[29]} :
-          (d_kseg0 || d_kseg1) ? 3'b000 :
-                                 dmem_vaddr[31:29];
+
+assign data_sram_addr  = dmem_vaddr;
+
 
 wire [31:0] data_sram_wdata_t;
 assign data_sram_wdata_t   = (es_f_ctrl2==2'b01)?es_forward_ms:
