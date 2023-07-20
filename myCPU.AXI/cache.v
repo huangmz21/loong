@@ -100,16 +100,16 @@ assign phys_tag[19:17] =
                                  tag_request[19:17];
 
 
-//Tag Compare (not consider uncache)
+//Tag Compare (not considering uncache)
 wire Way0_hit;
 wire Way1_hit;
 wire cache_hit;
 assign Way0_hit = Way0_V && (Way0_Tag == phys_tag);
 assign Way1_hit = Way1_V && (Way1_Tag == phys_tag);
-assign cache_hit = (Way0_hit || Way1_hit) && (main_cur_state == `LOOKUP);
+assign cache_hit = (Way0_hit || Way1_hit) && (main_cur_state == `LOOKUP) && (~uncache);
 
 wire uncache;
-assign uncache = kseg1;
+assign uncache = kseg1 && valid; //invalid is not uncache
 
 //Data Select
 wire [31:0] Way0_load_word;
@@ -301,7 +301,8 @@ wire [7:0] Way0_Bank0_addra;
 wire [31:0] Way0_Bank0_dina;
 wire [31:0] Way0_Bank0_douta;
 
-assign  Way0_Bank0_ena = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?1'b1:
+assign  Way0_Bank0_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b0)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00)?1'b1:
@@ -335,7 +336,8 @@ wire [7:0] Way0_Bank1_addra;
 wire [31:0] Way0_Bank1_dina;
 wire [31:0] Way0_Bank1_douta;
 
-assign  Way0_Bank1_ena = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?1'b1:
+assign  Way0_Bank1_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b0)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01)?1'b1:
@@ -363,7 +365,8 @@ wire [3:0] Way0_Bank2_wea;
 wire [7:0] Way0_Bank2_addra;
 wire [31:0] Way0_Bank2_dina;
 wire [31:0] Way0_Bank2_douta;
-assign  Way0_Bank2_ena = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?1'b1:
+assign  Way0_Bank2_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b0)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10)?1'b1:
@@ -391,7 +394,8 @@ wire [3:0] Way0_Bank3_wea;
 wire [7:0] Way0_Bank3_addra;
 wire [31:0] Way0_Bank3_dina;
 wire [31:0] Way0_Bank3_douta;
-assign  Way0_Bank3_ena = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?1'b1:
+assign  Way0_Bank3_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b0)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11)?1'b1:
@@ -419,7 +423,8 @@ wire [3:0] Way1_Bank0_wea;
 wire [7:0] Way1_Bank0_addra;
 wire [31:0] Way1_Bank0_dina;
 wire [31:0] Way1_Bank0_douta;
-assign  Way1_Bank0_ena = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?1'b1:
+assign  Way1_Bank0_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b1)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00)?1'b1:
@@ -451,7 +456,8 @@ wire [3:0] Way1_Bank1_wea;
 wire [7:0] Way1_Bank1_addra;
 wire [31:0] Way1_Bank1_dina;
 wire [31:0] Way1_Bank1_douta;
-assign  Way1_Bank1_ena = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?1'b1:
+assign  Way1_Bank1_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b1)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?1'b1:
@@ -479,7 +485,8 @@ wire [3:0] Way1_Bank2_wea;
 wire [7:0] Way1_Bank2_addra;
 wire [31:0] Way1_Bank2_dina;
 wire [31:0] Way1_Bank2_douta;
-assign  Way1_Bank2_ena = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?1'b1:
+assign  Way1_Bank2_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b1)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10)?1'b1:
@@ -507,7 +514,8 @@ wire [3:0] Way1_Bank3_wea;
 wire [7:0] Way1_Bank3_addra;
 wire [31:0] Way1_Bank3_dina;
 wire [31:0] Way1_Bank3_douta;
-assign  Way1_Bank3_ena = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?1'b1:
+assign  Way1_Bank3_ena = uncache?1'b0
+                        :(w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?1'b1:
                         (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b1)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11)?1'b1:
@@ -637,14 +645,14 @@ always @(posedge clk_g) begin
                 end
             end
             `LOOKUP: begin
-                if(cache_hit && (valid ==1'b0 || hitwrite_conf)) begin
+                if(cache_hit && (valid ==1'b0 || hitwrite_conf) && ~uncache) begin
                     main_cur_state <= `IDLE;
                 end
-                else if(cache_hit && (valid == 1'b1 && hitwrite_conf == 1'b0))begin
+                else if(cache_hit && (valid == 1'b1 && hitwrite_conf == 1'b0) && ~uncache)begin
                     //注意下一个RAM的读使能信号
                     main_cur_state <= `LOOKUP;
                 end
-                else if(cache_hit == 1'b0) begin
+                else if(cache_hit == 1'b0 || uncache) begin
                     main_cur_state <= `MISS;
                 end
 
@@ -654,20 +662,19 @@ always @(posedge clk_g) begin
                     main_cur_state <= `MISS;
                 end
                 else if (wr_rdy == 1'b1) begin
-                    if( miss_way ? ((Way1_TagV_douta[0] == 1'b1)&&(Way1_D_douta == 1'b1)) :
-                            ((Way0_TagV_douta[0] == 1'b1)&&(Way0_D_douta == 1'b1))) begin
+                    if( uncache || (miss_way ? ((Way1_TagV_douta[0] == 1'b1)&&(Way1_D_douta == 1'b1)) :
+                            ((Way0_TagV_douta[0] == 1'b1)&&(Way0_D_douta == 1'b1)))) begin
                         wr_req <= 1'b1;
                     end
                     main_cur_state <= `REPLACE;  //这里的写使能逻辑应该可以换为next控制的组合逻
                 end
             end
             `REPLACE: begin
+                wr_req <= 1'b0;
                 if(rd_rdy == 1'b0 ) begin
-                    wr_req <= 1'b0;
                     main_cur_state <= `REPLACE;
                 end
                 else if(rd_rdy == 1'b1)begin
-                    wr_req <= 1'b0;
                     main_cur_state <= `REFILL;
                 end
             end
@@ -815,12 +822,17 @@ assign rdata = cache_hit? (Way0_hit?(
                             (miss_read_num[1:0] == offset_request[3:2]) ? ret_data:
                           
                 32'b0;
-assign wr_data = miss_way ? {Way1_Bank0_douta,Way1_Bank1_douta,Way1_Bank2_douta,Way1_Bank3_douta}:
+//if uncache, only write a word.
+assign wr_data = uncache? {96'b0, wdata_request}
+                :miss_way ? {Way1_Bank0_douta,Way1_Bank1_douta,Way1_Bank2_douta,Way1_Bank3_douta}:
                          {Way0_Bank0_douta,Way0_Bank1_douta,Way0_Bank2_douta,Way0_Bank3_douta};
 //注意这里的addrok会影响stall
-assign addr_ok = (main_cur_state == `IDLE)
+// If uncache, stall all until IDLE stage.
+assign addr_ok = uncache? main_cur_state == `IDLE
+                :(main_cur_state == `IDLE)
                  || (main_cur_state == `LOOKUP && main_next_state == `LOOKUP);
-assign data_ok = (main_cur_state == `LOOKUP && cache_hit)
+assign data_ok = uncache? main_cur_state == `IDLE
+                :(main_cur_state == `LOOKUP && cache_hit)
                  //|| (main_cur_state == `LOOKUP && op_request == 1'b1)
                  || (main_cur_state == `REFILL && ret_valid == 1'b1 && miss_read_num[1:0] == offset_request [3:2]);
 assign rd_addr = miss_addr;
