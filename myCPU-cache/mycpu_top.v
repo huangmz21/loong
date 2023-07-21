@@ -72,6 +72,37 @@ wire [31:0] cpu_data_wdata;
 wire        cpu_data_addr_ok;
 wire        cpu_data_data_ok;
 wire [31:0] cpu_data_rdata;
+
+wire         inst_rd_req;
+wire [  2:0] inst_rd_type;
+wire [ 31:0] inst_rd_addr;
+wire         inst_rd_rdy;
+wire         inst_ret_valid;
+wire         inst_ret_last;
+wire [ 31:0] inst_ret_data;
+
+wire         inst_wr_req;
+wire [  2:0] inst_wr_type;
+wire [ 31:0] inst_wr_addr;
+wire [  3:0] inst_wr_wstrb;
+wire [127:0] inst_wr_data;
+wire         inst_wr_rdy;
+
+wire         data_rd_req;
+wire [  2:0] data_rd_type;
+wire [ 31:0] data_rd_addr;
+wire         data_rd_rdy;
+wire         data_ret_valid;
+wire         data_ret_last;
+wire [ 31:0] data_ret_data;
+
+wire         data_wr_req;
+wire [  2:0] data_wr_type;
+wire [ 31:0] data_wr_addr;
+wire [  3:0] data_wr_wstrb;
+wire [127:0] data_wr_data;
+wire         data_wr_rdy;
+
 //cpu
 mycpu cpu(
     .clk              (aclk   ),
@@ -105,32 +136,43 @@ mycpu cpu(
     .debug_wb_rf_wdata(debug_wb_rf_wdata)
 );
 
-cpu_axi_interface my_axi(
+cache_axi_interface my_cache_axi_interface
+(
     .clk(aclk),
-    .resetn(aresetn),
-    //.flush(1'b0),
+    .resetn(aresetn), 
 
-    //inst sram-like 
-    .inst_req     (cpu_inst_req    ),
-    .inst_wr      (cpu_inst_wr     ),
-    .inst_size    (cpu_inst_size   ),
-    .inst_addr    (cpu_inst_addr   ),
-    .inst_wstrb   (cpu_inst_wstrb  ),
-    .inst_wdata   (cpu_inst_wdata  ),
-    .inst_rdata   (cpu_inst_rdata  ),
-    .inst_addr_ok (cpu_inst_addr_ok),
-    .inst_data_ok (cpu_inst_data_ok),
+    //inst cache 
+    .inst_rd_req(inst_rd_req)  ,
+    .inst_rd_type(inst_rd_type) ,
+    .inst_rd_addr(inst_rd_addr) ,
+    .inst_rd_rdy(inst_rd_rdy)  ,
+    .inst_ret_valid(inst_ret_valid),
+    .inst_ret_last(inst_ret_last),
+    .inst_rdata(inst_ret_data)   ,
 
-    .data_req     (cpu_data_req    ),
-    .data_wr      (cpu_data_wr     ),
-    .data_size    (cpu_data_size   ),
-    .data_addr    (cpu_data_addr   ),
-    .data_wstrb   (cpu_data_wstrb  ),
-    .data_wdata   (cpu_data_wdata  ),
-    .data_rdata   (cpu_data_rdata  ),
-    .data_addr_ok (cpu_data_addr_ok),
-    .data_data_ok (cpu_data_data_ok),
+    .inst_wr_req(inst_wr_req)  ,
+    .inst_wr_type(inst_wr_type) ,
+    .inst_wr_addr(inst_wr_addr) ,
+    .inst_wstrb(inst_wr_wstrb)   ,
+    .inst_wdata(inst_wr_data)   ,
+    .inst_wr_rdy(inst_wr_rdy)  ,
     
+    //data cache 
+    .data_rd_req(data_rd_req)  ,
+    .data_rd_type(data_rd_type) ,
+    .data_rd_addr(data_rd_addr) ,
+    .data_rd_rdy(data_rd_rdy)  ,
+    .data_ret_valid(data_ret_valid),
+    .data_ret_last(data_ret_last),
+    .data_rdata(data_ret_data)   ,
+
+    .data_wr_req(data_wr_req)   ,
+    .data_wr_type(data_wr_type) ,
+    .data_wr_addr(data_wr_addr) ,
+    .data_wstrb(data_wr_wstrb)  ,
+    .data_wdata(data_wr_data)   ,
+    .data_wr_rdy(data_wr_rdy)   ,
+
     //axi///////
     //ar
     .arid   (arid   )         ,
@@ -177,5 +219,71 @@ cpu_axi_interface my_axi(
     .bresp  (bresp  )         ,
     .bvalid (bvalid )         ,
     .bready (bready )       
+);
+
+cache icache(
+    //与CPU的接口
+    .clk_g    (aclk),
+    .resetn (aresetn),
+    
+    .valid  (cpu_inst_req ),
+    .op     (cpu_inst_wr ),
+    .index  (cpu_inst_addr[11:4 ]  ),
+    .tag    (cpu_inst_addr[31:12]  ),
+    .offset (cpu_inst_addr[3 :0 ]  ),
+    .wstrb  (cpu_inst_wstrb),
+    .wdata  (cpu_inst_wdata),
+
+    .addr_ok(cpu_inst_addr_ok),
+    .data_ok(cpu_inst_data_ok),
+    .rdata  (cpu_inst_rdata ),
+     //与AXI总线的交互接口
+    .rd_req   (inst_rd_req   ),
+    .rd_type  (inst_rd_type  ),
+    .rd_addr  (inst_rd_addr  ),
+    .rd_rdy   (inst_rd_rdy   ),
+    .ret_valid(inst_ret_valid),
+    .ret_last (inst_ret_last ),
+    .ret_data (inst_ret_data ),
+
+    .wr_req  (inst_wr_req  ),
+    .wr_type (inst_wr_type ),
+    .wr_addr (inst_wr_addr ),
+    .wr_wstrb(inst_wr_wstrb),
+    .wr_data (inst_wr_data ),
+    .wr_rdy  (inst_wr_rdy  )
+);
+
+cache dcache(
+    //与CPU的接口
+    .clk_g    (aclk),
+    .resetn (aresetn),
+    
+    .valid  (cpu_data_req ),
+    .op     (cpu_data_wr ),
+    .index  (cpu_data_addr[11:4 ]  ),
+    .tag    (cpu_data_addr[31:12]  ),
+    .offset (cpu_data_addr[3 :0 ]  ),
+    .wstrb  (cpu_data_wstrb),
+    .wdata  (cpu_data_wdata),
+
+    .addr_ok(cpu_data_addr_ok),
+    .data_ok(cpu_data_data_ok),
+    .rdata  (cpu_data_rdata ),
+     //与AXI总线的交互接口
+    .rd_req   (data_rd_req   ),
+    .rd_type  (data_rd_type  ),
+    .rd_addr  (data_rd_addr  ),
+    .rd_rdy   (data_rd_rdy   ),
+    .ret_valid(data_ret_valid),
+    .ret_last (data_ret_last ),
+    .ret_data (data_ret_data ),
+
+    .wr_req  (data_wr_req  ),
+    .wr_type (data_wr_type ),
+    .wr_addr (data_wr_addr ),
+    .wr_wstrb(data_wr_wstrb),
+    .wr_data (data_wr_data ),
+    .wr_rdy  (data_wr_rdy  )
 );
 endmodule

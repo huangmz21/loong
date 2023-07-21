@@ -17,9 +17,12 @@ module exe_stage(
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
     // data sram interface
     output        data_sram_en   ,
+    output        data_sram_wr,
+    output [ 1:0] data_sram_size,
     output [ 3:0] data_sram_wen  ,
     output [31:0] data_sram_addr ,
     output [31:0] data_sram_wdata,
+    input         data_sram_addr_ok,
     //forward datapath
     input  [32-1:0] es_forward_ms,
     input  [32-1:0] es_forward_ws,
@@ -40,6 +43,8 @@ module exe_stage(
 reg         es_valid      ;
 assign es_valid_h = es_valid;
 wire        es_ready_go   ;
+reg         data_sram_addr_ok_r;
+reg         data_req_not_allow;
 
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 reg [2*5-1:0] ds_to_es_addr_r; 
@@ -87,6 +92,8 @@ wire        ex_from_id    ;
 wire [ 4:0] excode_from_id;
 wire        signed_from_ds;
 
+wire        inst_eret     ;
+wire        bd_from_if    ;
 wire [ 4:0] es_cp0_addr   ;
 wire        mtc0_we_from_id;
 wire        mtc0_we_es    ;
@@ -228,17 +235,19 @@ always @(*) begin
     end
 end
 
-assign es_to_ms_bus = {inst_addr_ex_es   ,//125:125
-                       inst_eret      ,   //124:124
-                       bd_from_if     ,   //123:123
+assign es_to_ms_bus = {inst_addr_ex_es   ,//127:127
+                       inst_eret      ,   //126:126
+                       bd_from_if     ,   //125:125
                        //exception part begin
-                       mtc0_we_es     ,   //122:122
-                       es_cp0_addr    ,   //121:117
-                       es_ex          ,   //116:116
-                       es_excode      ,   //115:111
-                       es_res_from_cp0,   //110:110
+                       mtc0_we_es     ,   //124:124
+                       es_cp0_addr    ,   //123:119
+                       es_ex          ,   //118:118
+                       es_excode      ,   //117:113
+                       es_res_from_cp0,   //112:112
                        //END
 
+                       data_sram_wr,          //111:111
+                       es_res_from_mem,       //110:110
                        es_res_from_mem_lwl,   //109:109
                        es_res_from_mem_lwr,   //108:108
                        es_rt_value,           //107:76
@@ -253,9 +262,35 @@ assign es_to_ms_bus = {inst_addr_ex_es   ,//125:125
                        es_pc                  //31:0
                       };
 
-assign es_ready_go    = (stallE==2'b01)?1'b0:1'b1;
+assign es_ready_go    = (stallE==2'b01) ? 1'b0 :
+                        (es_res_from_mem || data_sram_wr) ? (data_sram_addr_ok || data_sram_addr_ok_r) :
+                        1'b1;
 assign es_allowin     = (!es_valid || es_ready_go && ms_allowin);
 assign es_to_ms_valid = (es_valid && es_ready_go);
+
+always @(posedge clk) begin
+    if(reset) begin
+        data_sram_addr_ok_r <= 1'b0;
+    end
+    else if(es_to_ms_valid && ms_allowin) begin
+        data_sram_addr_ok_r <= 1'b0;
+    end
+    //else if(data_sram_addr_ok && es_res_from_mem) begin
+    else if(data_sram_addr_ok && data_sram_en) begin
+        data_sram_addr_ok_r <= 1'b1;
+    end
+
+    if(reset) begin
+        data_req_not_allow <= 1'b0;
+    end
+    else if(es_to_ms_valid && ms_allowin) begin
+        data_req_not_allow <= 1'b0;
+    end
+    else if(data_sram_addr_ok && es_ready_go && ~ms_allowin && (es_res_from_mem || data_sram_wr) && es_valid) begin//¸Ð¾õ&& es_res_from_mem¿ÉÉ¾È¥
+        data_req_not_allow <= 1'b1;
+    end
+end
+
 always @(posedge clk) begin
     if (reset || ex_from_ws) begin
         es_valid <= 1'b0;
@@ -267,7 +302,7 @@ always @(posedge clk) begin
         ds_to_es_bus_r[95:64] <= es_alu_src1;
     end
     else if ( ~es_allowin && es_f_ctrl2!=2'b00) begin
-        ds_to_es_bus_r[63:32] <= es_alu_src2;
+        ds_to_es_bus_r[63:32] <= es_rt_value;
     end
     if (ds_to_es_valid && es_allowin) begin 
         ds_to_es_bus_r  <= ds_to_es_bus;
@@ -335,7 +370,7 @@ assign es_l_wdata = (es_mudi[0] | es_mudi[1]) ? es_prodata[31:0]  :
 
 assign es_stop = ((es_mudi[2] && ~es_tvalid_out) | (es_mudi[3] && ~es_tvalid_outu))&& ~ex_from_ms;
 wire [1:0] es_hl_we_in; //considering exception from ms.
-assign es_hl_we_in = es_hl_we & {2{~ex_from_ms}};
+assign es_hl_we_in = es_hl_we & {2{es_valid}} & {2{~ex_from_ms}} & {2{~ex_from_ws}} & {2{(es_tvalid_out | es_tvalid_outu | es_mudi[0] | es_mudi[1] | es_dst_is_hi | es_dst_is_lo)}};
 hilo hilo1(
     .clk(clk),
     .hl_we(es_hl_we_in),
@@ -357,8 +392,10 @@ assign es_whb_mux = es_alu_result[1:0];
 assign es_final_alu_result = es_res_from_hi ? es_h_rdata:
                              es_res_from_lo ? es_l_rdata:
                              es_alu_result;
-assign ds_forward_es = es_final_alu_result;
-assign data_sram_en    = 1'b1;
+assign ds_forward_es   = es_final_alu_result;
+
+assign data_sram_en    = es_valid && (es_res_from_mem || data_sram_wr) && ~data_req_not_allow;
+
 assign data_sram_wen   = (ex_from_ms||ex_from_ws||es_ex)?4'h0:
                          es_mem_we_w&&es_valid ? 4'hf : 
                          es_mem_we_h&&~es_alu_result[1]&&es_valid ? 4'h3 : 
@@ -376,6 +413,10 @@ assign data_sram_wen   = (ex_from_ms||ex_from_ws||es_ex)?4'h0:
                          es_mem_we_swr && (es_whb_mux == 2'b10) && es_valid ? 4'b1100:
                          es_mem_we_swr && (es_whb_mux == 2'b11) && es_valid ? 4'b1000:
                          4'h0;
+assign data_sram_wr    = |data_sram_wen;
+assign data_sram_size  = (es_res_from_mem_w || es_mem_we_w || ((es_res_from_mem_lwl || es_mem_we_swl) && es_alu_result[1]) || ((es_res_from_mem_lwr || es_mem_we_swr) && ~es_alu_result[1])) ? 2'b10 :
+                         (es_res_from_mem_h || es_mem_we_h || ((es_res_from_mem_lwl || es_mem_we_swl) && (es_whb_mux == 2'b01)) || ((es_res_from_mem_lwr || es_mem_we_swr) && (es_whb_mux == 2'b10))) ? 2'b01 :
+                         2'b00;
 
 //virtual - real address
 wire [31:0] dmem_vaddr;
@@ -384,7 +425,8 @@ wire d_kseg0  ;
 wire d_kseg1  ;
 wire d_kseg2  ;
 wire d_kseg3  ;
-assign dmem_vaddr = es_alu_result;
+assign dmem_vaddr = (es_res_from_mem_lwl || es_mem_we_swl) ? {es_alu_result[31:2],2'b00} :
+                         es_alu_result;
 assign d_kuseg   = ~dmem_vaddr[31];
 assign d_kseg0   = dmem_vaddr[31:29]==3'b100;
 assign d_kseg1   = dmem_vaddr[31:29]==3'b101;
@@ -397,32 +439,36 @@ assign data_sram_addr[31:29] =
           (d_kseg0 || d_kseg1) ? 3'b000 :
                                  dmem_vaddr[31:29];
 
+
+//assign data_sram_addr  = dmem_vaddr;
+
+
 wire [31:0] data_sram_wdata_t;
-assign data_sram_wdata_t = (es_f_ctrl2==2'b01)?es_forward_ms:
-                         (es_f_ctrl2==2'b10)?es_forward_ws:
-                         es_rt_value;
+assign data_sram_wdata_t   = (es_f_ctrl2==2'b01)?es_forward_ms:
+                             (es_f_ctrl2==2'b10)?es_forward_ws:
+                              es_rt_value;
 wire [31:0] data_sram_wdata_swl;
 wire [31:0] data_sram_wdata_swr;
 wire [1:0] addr_last;
-assign addr_last = es_whb_mux;
-assign data_sram_wdata_swl= (addr_last==2'b00)? {24'b0,data_sram_wdata_t[31:24]}:
-                            (addr_last==2'b01)? {12'b0,data_sram_wdata_t[31:16]}:
-                            (addr_last==2'b10)? {8'b0,data_sram_wdata_t[31:8]}:
-                            {data_sram_wdata_t[31:0]};
-assign data_sram_wdata_swr= (addr_last==2'b00)? {data_sram_wdata_t[31:0]}:
-                            (addr_last==2'b01)? {data_sram_wdata_t[23:0],8'b0}:
-                            (addr_last==2'b10)? {data_sram_wdata_t[15:0],16'b0}:
-                            {data_sram_wdata_t[7:0],24'b0};
-assign data_sram_wdata = es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
-                         es_mem_we_b ? {4{data_sram_wdata_t[ 7:0]}} :
-                         es_mem_we_swl ? data_sram_wdata_swl:
-                         es_mem_we_swr ? data_sram_wdata_swr:
-                         data_sram_wdata_t;
+assign addr_last           =  es_whb_mux;
+assign data_sram_wdata_swl = (addr_last==2'b00)? {24'b0,data_sram_wdata_t[31:24]}:
+                             (addr_last==2'b01)? {12'b0,data_sram_wdata_t[31:16]}:
+                             (addr_last==2'b10)? {8'b0,data_sram_wdata_t[31:8]}:
+                             {data_sram_wdata_t[31:0]};
+assign data_sram_wdata_swr = (addr_last==2'b00)? {data_sram_wdata_t[31:0]}:
+                             (addr_last==2'b01)? {data_sram_wdata_t[23:0],8'b0}:
+                             (addr_last==2'b10)? {data_sram_wdata_t[15:0],16'b0}:
+                             {data_sram_wdata_t[7:0],24'b0};
+assign data_sram_wdata     =  es_mem_we_h ? {2{data_sram_wdata_t[15:0]}} :
+                              es_mem_we_b ? {4{data_sram_wdata_t[ 7:0]}} :
+                              es_mem_we_swl ? data_sram_wdata_swl:
+                              es_mem_we_swr ? data_sram_wdata_swr:
+                              data_sram_wdata_t;
 
 wire es_src1_is_ex_mem ;
 wire es_src2_is_ex_mem ;
 wire es_src1_is_mem_wb ;
 wire es_src2_is_mem_wb ;
-assign  es_res_from_cp0_h = es_res_from_cp0 && es_valid;
+assign  es_res_from_cp0_h  = es_res_from_cp0 && es_valid;
 
 endmodule
