@@ -289,7 +289,7 @@ assign  Way0_Bank0_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00)?1'b1:
                          1'b0;
 assign Way0_Bank0_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way0_Bank0_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?index:
@@ -324,7 +324,7 @@ assign  Way0_Bank1_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01)?1'b1:
                          1'b0;
 assign Way0_Bank1_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way0_Bank1_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?index:
@@ -357,7 +357,7 @@ assign  Way0_Bank2_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10)?1'b1:
                          1'b0;
 assign Way0_Bank2_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way0_Bank2_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?index:
@@ -390,7 +390,7 @@ assign  Way0_Bank3_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11)?1'b1:
                          1'b0;
 assign Way0_Bank3_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way0_Bank3_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?index:
@@ -423,7 +423,7 @@ assign  Way1_Bank0_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00)?1'b1:
                          1'b0;
 assign Way1_Bank0_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00) ?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00 && ret_valid) ?miss_wea:
                         4'b0;
 assign  Way1_Bank0_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?index:
@@ -456,7 +456,7 @@ assign  Way1_Bank1_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?1'b1:
                          1'b0;
 assign Way1_Bank1_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way1_Bank1_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?index:
@@ -489,7 +489,7 @@ assign  Way1_Bank2_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10)?1'b1:
                          1'b0;
 assign Way1_Bank2_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way1_Bank2_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?index:
@@ -522,7 +522,7 @@ assign  Way1_Bank3_ena = uncache?1'b0
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11)?1'b1:
                          1'b0;
 assign Way1_Bank3_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?wea_write:
-                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11)?miss_wea:
+                        (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11 && ret_valid)?miss_wea:
                         4'b0;
 assign  Way1_Bank3_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?index_write:
                            (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?index:
