@@ -40,7 +40,7 @@ module cache(
     output [31:0] wr_addr ,
     output [3:0] wr_wstrb,
     output [127:0] wr_data ,
-    output wr_rdy  
+    input wr_rdy  
 );
 //状态机
 reg [2:0] main_cur_state;
@@ -79,37 +79,17 @@ always @(posedge clk_g) begin
     end
 end
 
-//地址映射
-wire [19:0] phys_tag;
-
-wire kuseg  ;
-wire kseg0  ;
-wire kseg1  ;
-wire kseg2  ;
-wire kseg3  ;
-assign kuseg   = ~tag_request[19];
-assign kseg0   = tag_request[19:17]==3'b100;
-assign kseg1   = tag_request[19:17]==3'b101;
-assign kseg2   = tag_request[19:17]==3'b110;
-assign kseg3   = tag_request[19:17]==3'b111;
-
-assign phys_tag[16:0]  = tag_request[16:0];
-assign phys_tag[19:17] =   
-                       kuseg ? {(!tag_request[18]) ? 2'b01 : 2'b10, tag_request[17]} :
-          (kseg0 || kseg1) ? 3'b000 :
-                                 tag_request[19:17];
-
 
 //Tag Compare (not considering uncache)
 wire Way0_hit;
 wire Way1_hit;
 wire cache_hit;
-assign Way0_hit = Way0_V && (Way0_Tag == phys_tag);
-assign Way1_hit = Way1_V && (Way1_Tag == phys_tag);
+assign Way0_hit = Way0_V && (Way0_Tag == tag_request);
+assign Way1_hit = Way1_V && (Way1_Tag == tag_request);
 assign cache_hit = (Way0_hit || Way1_hit) && (main_cur_state == `LOOKUP) && (~uncache);
 
 wire uncache;
-assign uncache = kseg1 && valid; //invalid is not uncache
+assign uncache = tag_request[19:4] == 16'h1faf; //invalid is not uncache
 
 //Data Select
 wire [31:0] Way0_load_word;
@@ -158,7 +138,8 @@ always @(posedge clk_g) begin
                     (Way1_V==1'b0)?1'b1:
                     lfsr_reg;
     else if(lookup_to_miss) begin
-        miss_addr<={phys_tag,index_request,offset_request};
+        miss_addr<=uncache?{tag_request,index_request,offset_request}
+                    :{tag_request,index_request,4'b0};
         miss_op <= op_request;
         
     end
@@ -206,7 +187,7 @@ always @(posedge clk_g) begin
 
     else if(ena_write) begin
         valid_write <= 1'b1;
-        tag_write <= index_request;
+        tag_write <= tag_request;
         way_write <= Way0_hit?1'b0:1'b1;
         index_write <= index_request;
         offset_write <= offset_request;
@@ -231,16 +212,16 @@ wire [19:0] Way0_Tag;
 assign Way0_V = Way0_TagV_douta[0];
 assign Way0_Tag = Way0_TagV_douta[20:1];
 //
-wire index_replace_0;
+wire [7:0] index_replace_0;
 assign index_replace_0 = (lfsr_reg == 1'b0)? index_request: 8'b0;
-wire index_refill_0;
+wire [7:0] index_refill_0;
 assign index_refill_0 = (miss_way == 1'b0)? index_request: 8'b0;
 //
 assign Way0_TagV_addra = (main_next_state == `LOOKUP) ? index:
                          (main_next_state == `REPLACE) ? index_replace_0:
                          (main_next_state == `REFILL) ? index_refill_0:
                          8'b0;
-assign Way0_TagV_dina = (main_next_state == `REFILL) ? {3'b0,phys_tag,1'b1}:
+assign Way0_TagV_dina = (main_next_state == `REFILL) ? {3'b0,tag_request,1'b1}:
                         24'b0;
 assign Way0_TagV_ena = (main_next_state == `LOOKUP)? 1'b1:
                        (main_next_state == `REPLACE && miss_way == 1'b0)? 1'b1:
@@ -268,16 +249,16 @@ wire [19:0] Way1_Tag;
 assign Way1_V = Way1_TagV_douta[0];
 assign Way1_Tag = Way1_TagV_douta[20:1];
 //
-wire index_replace_1;
+wire [7:0] index_replace_1;
 assign index_replace_1 = (lfsr_reg == 1'b1)? index_request: 8'b0;
-wire index_refill_1;
+wire [7:0] index_refill_1;
 assign index_refill_1 = (miss_way == 1'b1)? index_request: 8'b0;
 //
 assign Way1_TagV_addra = (main_next_state == `LOOKUP) ? index:
                          (main_next_state == `REPLACE) ? index_replace_1:
                          (main_next_state == `REFILL) ? index_refill_1:
                          8'b0;
-assign Way1_TagV_dina = (main_next_state == `REFILL) ? {3'b0,phys_tag,1'b1}:
+assign Way1_TagV_dina = (main_next_state == `REFILL) ? {3'b0,tag_request,1'b1}:
                         24'b0;
 assign Way1_TagV_ena = (main_next_state == `LOOKUP)? 1'b1:
                        (main_next_state == `REPLACE && miss_way == 1'b1)? 1'b1:
@@ -310,10 +291,10 @@ assign  Way0_Bank0_ena = uncache?1'b0
 assign Way0_Bank0_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00)?miss_wea:
                         4'b0;
-assign  Way0_Bank0_addra = (w_cur_state == `WRITE)?index_write:
-                           (main_next_state == `LOOKUP)?index:
-                           (main_next_state == `REPLACE)?index_replace_0:
-                           (main_cur_state == `REFILL)?index_refill_0:
+assign  Way0_Bank0_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b00)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b0)?index_replace_0:
+                           (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b00)?index_refill_0:
                            8'b0;
 assign Way0_Bank0_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b00 && op_request == 1'b1)?wdata_request:
@@ -345,7 +326,11 @@ assign  Way0_Bank1_ena = uncache?1'b0
 assign Way0_Bank1_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01)?miss_wea:
                         4'b0;
-assign  Way0_Bank1_addra = Way0_Bank0_addra;
+assign  Way0_Bank1_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b01)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b0)?index_replace_0:
+                           (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b01)?index_refill_0:
+                           8'b0;
 assign Way0_Bank1_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b01 && op_request == 1'b1)?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -374,7 +359,11 @@ assign  Way0_Bank2_ena = uncache?1'b0
 assign Way0_Bank2_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10)?miss_wea:
                         4'b0;
-assign  Way0_Bank2_addra = Way0_Bank0_addra;
+assign  Way0_Bank2_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b10)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b0)?index_replace_0:
+                           (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b10)?index_refill_0:
+                           8'b0;
 assign Way0_Bank2_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b10 && op_request == 1'b1)?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -403,7 +392,11 @@ assign  Way0_Bank3_ena = uncache?1'b0
 assign Way0_Bank3_wea = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11)?miss_wea:
                         4'b0;
-assign  Way0_Bank3_addra = Way0_Bank0_addra;
+assign  Way0_Bank3_addra = (w_cur_state == `WRITE && way_write == 1'b0 && offset_write[3:2] == 2'b11)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b0)?index_replace_0:
+                           (main_cur_state == `REFILL && miss_way == 1'b0 && miss_read_num == 2'b11)?index_refill_0:
+                           8'b0;
 assign Way0_Bank3_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b11 && op_request == 1'b1)?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -432,10 +425,10 @@ assign  Way1_Bank0_ena = uncache?1'b0
 assign Way1_Bank0_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00) ?miss_wea:
                         4'b0;
-assign  Way1_Bank0_addra = (w_cur_state == `WRITE)?index_write:
-                           (main_next_state == `LOOKUP)?index:
-                           (main_next_state == `REPLACE)?index_replace_1:
-                           (main_cur_state == `REFILL)?index_refill_1:
+assign  Way1_Bank0_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b00)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b1)?index_replace_1:
+                           (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b00)?index_refill_1:
                            8'b0;
 assign Way1_Bank0_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b00 && op_request == 1'b1)?wdata_request:
@@ -458,14 +451,18 @@ wire [31:0] Way1_Bank1_dina;
 wire [31:0] Way1_Bank1_douta;
 assign  Way1_Bank1_ena = uncache?1'b0
                         :(w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?1'b1:
-                        (main_next_state == `LOOKUP && offset[3:2] == 2'b00)?1'b1:
+                        (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?1'b1:
                          (main_next_state == `REPLACE && miss_way == 1'b1)?1'b1:
                          (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?1'b1:
                          1'b0;
 assign Way1_Bank1_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?miss_wea:
                         4'b0;
-assign  Way1_Bank1_addra = Way1_Bank0_addra;
+assign  Way1_Bank1_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b01)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b01)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b1)?index_replace_1:
+                           (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b01)?index_refill_1:
+                           8'b0;
 assign Way1_Bank1_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b01 && op_request == 1'b1 )?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -494,7 +491,11 @@ assign  Way1_Bank2_ena = uncache?1'b0
 assign Way1_Bank2_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10)?miss_wea:
                         4'b0;
-assign  Way1_Bank2_addra = Way1_Bank0_addra;
+assign  Way1_Bank2_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b10)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b10)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b1)?index_replace_1:
+                           (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b10)?index_refill_1:
+                           8'b0;
 assign Way1_Bank2_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b10 && op_request == 1'b1)?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -523,7 +524,11 @@ assign  Way1_Bank3_ena = uncache?1'b0
 assign Way1_Bank3_wea = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?wea_write:
                         (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11)?miss_wea:
                         4'b0;
-assign  Way1_Bank3_addra = Way1_Bank0_addra;
+assign  Way1_Bank3_addra = (w_cur_state == `WRITE && way_write == 1'b1 && offset_write[3:2] == 2'b11)?index_write:
+                           (main_next_state == `LOOKUP && offset[3:2] == 2'b11)?index:
+                           (main_next_state == `REPLACE && miss_way == 1'b1)?index_replace_1:
+                           (main_cur_state == `REFILL && miss_way == 1'b1 && miss_read_num == 2'b11)?index_refill_1:
+                           8'b0;
 assign Way1_Bank3_dina = (w_cur_state == `WRITE)?dina_write:
                          (main_cur_state == `REFILL && offset_request[3:2] == 2'b11 && op_request == 1'b1)?wdata_request:
                          (main_cur_state == `REFILL )?ret_data:
@@ -621,10 +626,8 @@ assign Way1_D_douta = (Way1_D_ena == 1'b1)?Way1_D[Way1_D_addra]:1'b0;
 
 //标记是否有hit-write的冲突
 wire hitwrite_conf;
-assign hitwrite_conf = ((main_cur_state == `LOOKUP) && (op_request == 1'b1) 
-                     //&& (cache_hit == 1'b1)
-                     && (valid == 1'b1) && (op == 1'b0) && (index == index_request[3:2]))?1'b1:
-                     ((w_cur_state == `WRITE) && (offset[3:2] == offset_write[3:2]))?1'b1:
+assign hitwrite_conf = (if_hitwrite && valid == 1'b1 && op== 1'b0 && offset_request[3:2] == offset[3:2])?1'b1:
+                     ((w_cur_state == `WRITE) && op==1'b0 && (offset[3:2] == offset_write[3:2]) )?1'b1:
                      1'b0;
 wire if_hitwrite;
 assign if_hitwrite = cache_hit && (op_request == 1'b1) && (main_cur_state == `LOOKUP);
@@ -662,7 +665,7 @@ always @(posedge clk_g) begin
                     main_cur_state <= `MISS;
                 end
                 else if (wr_rdy == 1'b1) begin
-                    if( uncache || (miss_way ? ((Way1_TagV_douta[0] == 1'b1)&&(Way1_D_douta == 1'b1)) :
+                    if( (uncache && (op_request == 1'b1)) || (miss_way ? ((Way1_TagV_douta[0] == 1'b1)&&(Way1_D_douta == 1'b1)) :
                             ((Way0_TagV_douta[0] == 1'b1)&&(Way0_D_douta == 1'b1)))) begin
                         wr_req <= 1'b1;
                     end
@@ -671,18 +674,18 @@ always @(posedge clk_g) begin
             end
             `REPLACE: begin
                 wr_req <= 1'b0;
-                if(rd_rdy == 1'b0 ) begin
-                    main_cur_state <= `REPLACE;
-                end
-                else if(rd_rdy == 1'b1)begin
+                if(rd_rdy == 1'b1 || (uncache && (op_request == 1'b1)))begin
                     main_cur_state <= `REFILL;
+                end
+                else if(rd_rdy == 1'b0 ) begin
+                    main_cur_state <= `REPLACE;
                 end
             end
             `REFILL: begin
-                if(!(ret_valid == 1'b1 && ret_last == 1'b1)) begin
+                if(!(ret_valid == 1'b1 && ret_last == 1'b1) && !(uncache && (op_request == 1'b1))) begin
                     main_cur_state <= `REFILL;
                 end
-                else if(ret_valid == 1'b1 && ret_last == 1'b1)begin
+                else if((ret_valid == 1'b1 && ret_last == 1'b1)||(uncache && (op_request == 1'b1)))begin
                     main_cur_state <= `IDLE;
                 end
             end
@@ -819,9 +822,9 @@ assign rdata = cache_hit? (Way0_hit?(
                                       Way1_Bank3_douta
                                       )
                             ):
-                            (miss_read_num[1:0] == offset_request[3:2]) ? ret_data:
+                            (miss_read_num[1:0] == offset_request[3:2] || uncache) ? ret_data:
                           
-                32'b0;
+                32'habcd_abcd;
 //if uncache, only write a word.
 assign wr_data = uncache? {96'b0, wdata_request}
                 :miss_way ? {Way1_Bank0_douta,Way1_Bank1_douta,Way1_Bank2_douta,Way1_Bank3_douta}:
@@ -830,19 +833,20 @@ assign wr_data = uncache? {96'b0, wdata_request}
 // If uncache, stall all until IDLE stage.
 assign addr_ok = uncache? main_cur_state == `IDLE
                 :(main_cur_state == `IDLE)
-                 || (main_cur_state == `LOOKUP && main_next_state == `LOOKUP);
-assign data_ok = uncache? main_cur_state == `IDLE
+                 || (main_cur_state == `LOOKUP && main_next_state == `LOOKUP && valid);
+assign data_ok = uncache? ((main_cur_state == `REFILL && (op_request == 1'b1))||(main_cur_state == `REFILL && ret_valid == 1'b1 && ret_last == 1'b1 && op_request==1'b0))
                 :(main_cur_state == `LOOKUP && cache_hit)
                  //|| (main_cur_state == `LOOKUP && op_request == 1'b1)
                  || (main_cur_state == `REFILL && ret_valid == 1'b1 && miss_read_num[1:0] == offset_request [3:2]);
 assign rd_addr = miss_addr;
-assign wr_addr = cache_hit ?{tag_write,index_write,offset_write[3:2],2'b0}:
-                            {phys_tag,index_request,offset_request[3:2],2'b0};
+assign wr_addr = cache_hit ?{tag_write,index_write,4'b0}:
+                            uncache? {tag_request,index_request,offset_request}
+                                :{tag_request,index_request,4'b0};
 
-assign rd_req = (main_cur_state==`REPLACE) ? 1'b1 :1'b0;
+assign rd_req = ((main_cur_state==`REPLACE && ~uncache)||(main_cur_state==`REPLACE && uncache && op_request == 1'b0)) ? 1'b1 :1'b0;
 
 assign wr_wstrb = wstrb;
-assign rd_type = 3'b100;
-assign wr_type = 3'b100;
+assign rd_type = uncache? 3'b010:3'b100;
+assign wr_type = uncache? 3'b010:3'b100;
 
 endmodule

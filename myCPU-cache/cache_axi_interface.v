@@ -31,7 +31,7 @@ module cache_axi_interface
     input  [31:0] inst_rd_addr ,
     output reg    inst_rd_rdy  ,
     output reg    inst_ret_valid,
-    output reg[1 :0] inst_ret_last,
+    output reg    inst_ret_last,
     output reg[31:0] inst_rdata   ,
 
     input         inst_wr_req  ,
@@ -47,7 +47,7 @@ module cache_axi_interface
     input  [31:0] data_rd_addr ,
     output reg    data_rd_rdy  ,
     output reg    data_ret_valid,
-    output reg[1 :0] data_ret_last,
+    output reg    data_ret_last,
     output reg[31:0] data_rdata   ,
 
     input         data_wr_req  ,
@@ -105,10 +105,8 @@ module cache_axi_interface
     output reg    bready    
 );
 
-reg rcurrent_state;
-reg wcurrent_state;
-reg rnext_state;
-reg wnext_state;
+reg [2:0] rcurrent_state;
+reg [2:0] wcurrent_state;
 
 reg [127:0] cache_line_r ;
 reg [  1:0] wcount       ;
@@ -118,12 +116,6 @@ always @(posedge clk) begin
     if(~resetn) begin
         rcurrent_state <= `AXI_IDLE;
         wcurrent_state <= `AXI_IDLE;
-        rnext_state <= `AXI_IDLE;
-        wnext_state <= `AXI_IDLE;
-    end
-    else begin
-        rcurrent_state <= rnext_state;
-        wcurrent_state <= wnext_state;
     end
 end
 
@@ -132,13 +124,13 @@ always @(posedge clk) begin
     if(~resetn) begin
         inst_rd_rdy     <= 1'b0 ;
         inst_ret_valid  <= 1'b0 ;
-        inst_ret_last   <= 2'b0 ;
+        inst_ret_last   <= 1'b0 ;
         inst_rdata      <=32'b0 ;
         inst_wr_rdy     <= 1'b1 ;//Set to 1 when buffer is empty
 
         data_rd_rdy     <= 1'b0 ;
         data_ret_valid  <= 1'b0 ;
-        data_ret_last   <= 2'b0 ;
+        data_ret_last   <= 1'b0 ;
         data_rdata      <=32'b0 ;
         data_wr_rdy     <= 1'b1 ;
 
@@ -168,14 +160,26 @@ always @(posedge clk) begin
     else begin
         case(rcurrent_state)
         `AXI_IDLE: begin
+            
+            inst_ret_valid  <= 1'b0 ;
+            inst_ret_last   <= 1'b0 ;
+            inst_rdata      <=32'b0 ;
+
+            data_ret_valid  <= 1'b0 ;
+            data_ret_last   <= 1'b0 ;
+            data_rdata      <=32'b0 ;
+
             //next_state , data request first
             if(data_rd_req && 
                 !(data_rd_addr == data_wr_addr && wcurrent_state != `AXI_IDLE)) begin
-                rnext_state <= `DATA_WAIT_FOR_ARREADY;
+                rcurrent_state <= `DATA_WAIT_FOR_ARREADY;
 
                 arvalid <= 1'b1;
                 araddr <= data_rd_addr;
                 arburst <= `BURST_INCR;
+
+                data_rd_rdy <= 1'b1;
+                
                 //arsize & arlen
                 case(data_rd_type)
                 `TYPE_BYTE: begin
@@ -192,7 +196,7 @@ always @(posedge clk) begin
                 end
                 `TYPE_CACHE_LINE:begin
                     arsize <= 3'b010; //4 bytes per beat
-                    arlen <= 8'd4; //4 beat per burst
+                    arlen <= 8'd3; //4 beat per burst
                 end
                 default:begin
                     arsize <= 3'b010; //4 byte per beat
@@ -202,11 +206,14 @@ always @(posedge clk) begin
             end
             else if(inst_rd_req && 
                 !(inst_rd_addr == inst_wr_addr && wcurrent_state != `AXI_IDLE)) begin
-                rnext_state <= `INST_WAIT_FOR_ARREADY;
+                rcurrent_state <= `INST_WAIT_FOR_ARREADY;
 
                 arvalid <= 1'b1;
                 araddr <= inst_rd_addr;
                 arburst <= `BURST_INCR;
+
+                inst_rd_rdy <= 1'b1;
+
                 //arsize & arlen
                 case(inst_rd_type)
                 `TYPE_BYTE:begin
@@ -223,7 +230,7 @@ always @(posedge clk) begin
                 end
                 `TYPE_CACHE_LINE:begin
                     arsize <= 3'b010; //4 bytes per beat
-                    arlen <= 8'd4; //4 beat per burst
+                    arlen <= 8'd3; //4 beat per burst
                 end
                 default:begin
                     arsize <= 3'b010; //4 byte per beat
@@ -232,18 +239,12 @@ always @(posedge clk) begin
                 endcase
             end
             else begin
-                rnext_state <= `AXI_IDLE;
+                rcurrent_state <= `AXI_IDLE;
 
                 //refresh output
                 inst_rd_rdy     <= 1'b0 ;
-                inst_ret_valid  <= 1'b0 ;
-                inst_ret_last   <= 2'b0 ;
-                inst_rdata      <=32'b0 ;
 
                 data_rd_rdy     <= 1'b0 ;
-                data_ret_valid  <= 1'b0 ;
-                data_ret_last   <= 2'b0 ;
-                data_rdata      <=32'b0 ;
 
                 araddr  <=32'b0 ;
                 arlen   <= 8'b0 ;
@@ -257,8 +258,9 @@ always @(posedge clk) begin
         end
 
         `DATA_WAIT_FOR_ARREADY:begin
+            data_rd_rdy <= 1'b0;
             if(arready == 1'b1)begin
-                rnext_state <= `DATA_WAIT_FOR_READ_DONE;
+                rcurrent_state <= `DATA_WAIT_FOR_READ_DONE;
 
                 araddr <= 32'd0;
                 arvalid <= 1'b0;
@@ -266,13 +268,14 @@ always @(posedge clk) begin
                 arburst <= `BURST_INCR;
             end
             else begin
-                rnext_state <= `DATA_WAIT_FOR_ARREADY;
+                rcurrent_state <= `DATA_WAIT_FOR_ARREADY;
             end
         end
 
         `INST_WAIT_FOR_ARREADY:begin
+            inst_rd_rdy <= 1'b0;
             if(arready == 1'b1)begin
-                rnext_state <= `INST_WAIT_FOR_READ_DONE;
+                rcurrent_state <= `INST_WAIT_FOR_READ_DONE;
 
                 araddr <= 32'd0;
                 arvalid <= 1'b0;
@@ -280,7 +283,7 @@ always @(posedge clk) begin
                 arburst <= `BURST_INCR;
             end
             else begin
-                rnext_state <= `INST_WAIT_FOR_ARREADY;
+                rcurrent_state <= `INST_WAIT_FOR_ARREADY;
             end
         end
 
@@ -289,26 +292,11 @@ always @(posedge clk) begin
             if(rvalid == 1'b1 && rlast == 1'b1) begin
                 rready <= 1'b0;
                 data_rdata <= rdata;
+                data_ret_last <= rlast;
+                rcurrent_state <= `AXI_IDLE;
             end
             else if(rvalid == 1'b1) begin
                 data_rdata <= rdata;
-            end
-            else if(rvalid == 1'b0 && rready == 1'b0) begin //already read at least 1 bit
-                rnext_state <= `AXI_IDLE;
-            end
-        end
-
-        `DATA_WAIT_FOR_READ_DONE:begin
-            data_ret_valid <= rvalid;
-            if(rvalid == 1'b1 && rlast == 1'b1) begin
-                rready <= 1'b0;
-                data_rdata <= rdata;
-            end
-            else if(rvalid == 1'b1) begin
-                data_rdata <= rdata;
-            end
-            else if(rvalid == 1'b0 && rready == 1'b0) begin //already read at least 1 bit
-                rnext_state <= `AXI_IDLE;
             end
         end
 
@@ -317,25 +305,29 @@ always @(posedge clk) begin
             if(rvalid == 1'b1 && rlast == 1'b1) begin
                 rready <= 1'b0;
                 inst_rdata <= rdata;
+                inst_ret_last <= rlast;
+                rcurrent_state <= `AXI_IDLE;
             end
             else if(rvalid == 1'b1) begin
                 inst_rdata <= rdata;
             end
-            else if(rvalid == 1'b0 && rready == 1'b0) begin //already read at least 1 bit
-                rnext_state <= `AXI_IDLE;
-            end
         end
 
         default:begin
-            rnext_state <= `AXI_IDLE;
+            rcurrent_state <= `AXI_IDLE;
         end
 
         endcase
 
         case(wcurrent_state)
         `AXI_IDLE:begin
+            wcount <= 1'b0;
+            wdata   <=32'b0 ;
+            wlast   <= 1'b0 ;
+            wvalid  <= 1'b0 ;
+
             if(data_wr_req) begin
-                wnext_state <= `DATA_WAIT_FOR_AWREADY;
+                wcurrent_state <= `DATA_WAIT_FOR_AWREADY;
                 cache_line_r <= data_wdata;
                 data_wr_rdy <= 1'b0; //not ready for another line
                 wstrb <= data_wstrb;
@@ -360,7 +352,7 @@ always @(posedge clk) begin
                 end
                 `TYPE_CACHE_LINE:begin
                     awsize <= 3'b010; //4 bytes per beat
-                    awlen <= 8'd4; //4 beat per burst
+                    awlen <= 8'd3; //4 beat per burst
                 end
                 default:begin
                     awsize <= 3'b010; //4 byte per beat
@@ -370,7 +362,7 @@ always @(posedge clk) begin
 
             end
             else if(inst_wr_req) begin
-                wnext_state <= `INST_WAIT_FOR_AWREADY;
+                wcurrent_state <= `INST_WAIT_FOR_AWREADY;
                 cache_line_r <= inst_wdata;
                 wstrb <= inst_wstrb;
 
@@ -396,7 +388,7 @@ always @(posedge clk) begin
                 end
                 `TYPE_CACHE_LINE:begin
                     awsize <= 3'b010; //4 bytes per beat
-                    awlen <= 8'd4; //4 beat per burst
+                    awlen <= 8'd3; //4 beat per burst
                 end
                 default:begin
                     awsize <= 3'b010; //4 byte per beat
@@ -415,10 +407,7 @@ always @(posedge clk) begin
                 awcache <= 4'b0 ;
                 awvalid <= 1'b0 ;
 
-                wdata   <=32'b0 ;
                 wstrb   <= 4'b0 ;
-                wlast   <= 1'b0 ;
-                wvalid  <= 1'b0 ;
 
                 bready  <= 1'b0 ;
             end
@@ -426,23 +415,36 @@ always @(posedge clk) begin
             
         `DATA_WAIT_FOR_AWREADY:begin
             if(awready) begin
-                wnext_state <= `DATA_WAIT_FOR_WREADY;
+                wcurrent_state <= `DATA_WAIT_FOR_WREADY;
                 awvalid <= 1'b0;
-                wcount <= 1'b0;
+                wvalid <= 1'b1;
+                wcount <= 2'b1;
+                wdata <= cache_line_r[31:0];
+
+                if(awlen == 8'b0) begin
+                    wlast <= 1'b1;
+                end
+
             end
             else begin
-                wnext_state <= `DATA_WAIT_FOR_AWREADY;
+                wcurrent_state <= `DATA_WAIT_FOR_AWREADY;
             end
         end
 
         `INST_WAIT_FOR_AWREADY:begin
             if(awready) begin
-                wnext_state <= `INST_WAIT_FOR_WREADY;
+                wcurrent_state <= `INST_WAIT_FOR_WREADY;
                 awvalid <= 1'b0;
-                wcount <= 1'b0;
+                wvalid <= 1'b1;
+                wcount <= 2'b1;
+                wdata <= cache_line_r[31:0];
+
+                if(awlen == 8'b0) begin
+                    wlast <= 1'b1;
+                end
             end
             else begin
-                wnext_state <= `INST_WAIT_FOR_AWREADY;
+                wcurrent_state <= `INST_WAIT_FOR_AWREADY;
             end
         end
 
@@ -461,10 +463,13 @@ always @(posedge clk) begin
                 end
             end
             else if(wready == 1'b1 && wlast == 1'b1) begin
-                wnext_state <= `DATA_WAIT_FOR_BVALID;
+                wcurrent_state <= `DATA_WAIT_FOR_BVALID;
+                wlast <= 1'b0;
+                wvalid <= 1'b0;
+                bready <= 1'b1;
             end
             else begin
-                wnext_state <= `DATA_WAIT_FOR_WREADY;
+                wcurrent_state <= `DATA_WAIT_FOR_WREADY;
             end
         end
 
@@ -483,29 +488,34 @@ always @(posedge clk) begin
                 end
             end
             else if(wready == 1'b1 && wlast == 1'b1) begin
-                wnext_state <= `INST_WAIT_FOR_BVALID;
+                wcurrent_state <= `INST_WAIT_FOR_BVALID;
+                wvalid <= 1'b0;
+                wlast <= 1'b0;
+                bready <= 1'b1;
             end
             else begin
-                wnext_state <= `INST_WAIT_FOR_WREADY;
+                wcurrent_state <= `INST_WAIT_FOR_WREADY;
             end
         end
 
         `DATA_WAIT_FOR_BVALID: begin
+            wlast <= 1'b0;
             if(bvalid == 1'b1) begin
-                wnext_state <= `AXI_IDLE;
-                data_rd_rdy <= 1'b1;
+                wcurrent_state <= `AXI_IDLE;
+                data_wr_rdy <= 1'b1;
             end
         end
 
         `INST_WAIT_FOR_BVALID: begin
+            wlast <= 1'b0;
             if(bvalid == 1'b1) begin
-                wnext_state <= `AXI_IDLE;
+                wcurrent_state <= `AXI_IDLE;
                 inst_wr_rdy <= 1'b1;
             end
         end
 
         default: begin
-            wnext_state <= `AXI_IDLE;
+            wcurrent_state <= `AXI_IDLE;
         end
 
         endcase
